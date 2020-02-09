@@ -1,19 +1,19 @@
 import pygame
-import numpy as np
-from car import *
 
 
 class Animation:
 
-    def __init__(self, map, window_scale, objects):
+    def __init__(self, map, window_scale, objects, tasks):
         pygame.init()
         self.objects = objects
         self.map = map
+        self.tasks = tasks
         self.window_scale = window_scale
         self.window_size = [window_scale * self.map.width, window_scale * self.map.height]
         self.screen = pygame.display.set_mode(self.window_size)
+        self.myFont = pygame.font.SysFont('Helvetica', self.window_scale)
 
-        pygame.display.set_caption("TMP NAME")
+        pygame.display.set_caption("Simulation")
 
         self.clock = pygame.time.Clock()
         self.clock.tick(60)
@@ -55,5 +55,25 @@ class Animation:
                 return False
 
         self.draw_map()
+        self.print_labels()
         pygame.display.flip()
         return True
+
+    def print_labels(self):
+        for task in self.tasks:
+            if task.state == 'NEW' or task.state == 'COMPLETED':
+                continue
+            task_id = self.myFont.render(str(task.task_id), 1, (0, 0, 0))
+            if not task.state == 'ASSIGNED':
+                start_loc = ((task.start[1] - 1) * self.window_scale + 0.3 * self.window_scale,
+                             (task.start[0] - 1) * self.window_scale)
+                self.screen.blit(task_id, start_loc)
+
+            end_loc = (
+                (task.end[1] - 1) * self.window_scale + 0.3 * self.window_scale, (task.end[0] - 1) * self.window_scale)
+            self.screen.blit(task_id, end_loc)
+
+        for car in self.objects:
+            object_id = self.myFont.render(str(car.id), 1, (0, 0, 0))
+            loc = ((car.x - 1) * self.window_scale + 0.3 * self.window_scale, (car.y - 1) * self.window_scale)
+            self.screen.blit(object_id, loc)

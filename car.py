@@ -10,8 +10,8 @@ class Car:
         self.map = map
         self.map.map[self.y][self.x] = self
         self.current_task = None
-        # self.id = int(np.nanmax(self.map.map)) + 1
-        self.id = 8
+        self.id = self.map.car_id_max
+        self.map.car_id_max += 1
 
     def go_up(self):
         if self.map.map[self.y - 1][self.x].is_empty(self):
@@ -50,3 +50,6 @@ class Car:
             return (255, 247, 0)  # YELLOW
         else:
             return (0, 188, 255)  # ORANGE
+
+    def is_empty(self, car):
+        return False

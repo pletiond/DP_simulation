@@ -8,6 +8,7 @@ class Map:
         self.height = height
         self.map = []
         self.task_id_max = 1
+        self.car_id_max = 1
         for i in range(height + 2):
             self.map.append([])
             for j in range(width + 2):
