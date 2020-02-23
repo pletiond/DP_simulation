@@ -16,7 +16,6 @@ class Animation:
         pygame.display.set_caption("Simulation")
 
         self.clock = pygame.time.Clock()
-        self.clock.tick(60)
 
         self.colors = {'BLACK': (0, 0, 0), 'WHITE': (255, 255, 255), 'GREEN': (0, 255, 0), 'RED': (255, 0, 0),
                        'GREY': (116, 111, 110), 'ORANGE': (231, 95, 67), 'YELLOW': (255, 247, 0)}
@@ -26,7 +25,7 @@ class Animation:
 
     def draw_map(self):
         for row in range(1, self.map.height + 1):
-            for column in range(1, self.map.height + 1):
+            for column in range(1, self.map.width + 1):
                 color = self.map.map[row][column].get_color()
                 pygame.draw.rect(self.screen,
                                  color,
@@ -74,6 +73,6 @@ class Animation:
             self.screen.blit(task_id, end_loc)
 
         for car in self.objects:
-            object_id = self.myFont.render(str(car.id), 1, (0, 0, 0))
-            loc = ((car.x - 1) * self.window_scale + 0.3 * self.window_scale, (car.y - 1) * self.window_scale)
+            object_id = self.myFont.render('C' + str(car.id - 10), 1, (0, 0, 0))
+            loc = ((car.x - 1) * self.window_scale + 0.0 * self.window_scale, (car.y - 1) * self.window_scale)
             self.screen.blit(object_id, loc)

@@ -9,9 +9,11 @@ class Car:
         self.y = start_location[0]
         self.map = map
         self.map.map[self.y][self.x] = self
+        self.possible_task = None
         self.current_task = None
         self.id = self.map.car_id_max
         self.map.car_id_max += 1
+
 
     def go_up(self):
         if self.map.map[self.y - 1][self.x].is_empty(self):
@@ -51,5 +53,8 @@ class Car:
         else:
             return (0, 188, 255)  # ORANGE
 
-    def is_empty(self, car):
+    def is_empty(self, car=None):
         return False
+
+    def is_agent(self):
+        return True

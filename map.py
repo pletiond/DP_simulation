@@ -8,7 +8,7 @@ class Map:
         self.height = height
         self.map = []
         self.task_id_max = 1
-        self.car_id_max = 1
+        self.car_id_max = 10
         for i in range(height + 2):
             self.map.append([])
             for j in range(width + 2):
@@ -42,6 +42,37 @@ class Map:
     def print(self):
         print(self.map)
 
+    def to_bitman(self):
+        out = np.ones((self.height + 2, self.width + 2))
+        for i in range(self.height + 1):
+            for j in range(self.width + 2):
+                if not self.map[i][j] is None and self.map[i][j].is_empty():
+                    out[i][j] = 0
+        return out
+
+    def to_bitman_objects(self):
+        out = np.ones((self.height + 2, self.width + 2), dtype=np.int32)
+        for i in range(self.height + 1):
+            for j in range(self.width + 2):
+                if not self.map[i][j] is None and (self.map[i][j].is_empty() or self.map[i][j].is_agent()):
+                    out[i][j] = 0
+        return out
+
+    def print_map(self, map):
+        for i in range(len(map)):
+            if i == 0 or i == len(map) - 1:
+                continue
+            for j in range(len(map[i])):
+                if j == 0 or i == len(map[i]) - 1:
+                    continue
+                if map[i][j] == 0:
+                    print('--', end=' ')
+                elif map[i][j] == 1:
+                    print('XX', end=' ')
+                else:
+                    print("{:02d}".format(map[i][j]), end=' ')
+
+            print('\n')
 
 class Wall:
     def __str__(self):
@@ -50,7 +81,10 @@ class Wall:
     def get_color(self):
         return (116, 111, 110)  # Grey
 
-    def is_empty(self, car):
+    def is_empty(self, car=None):
+        return False
+
+    def is_agent(self):
         return False
 
 
@@ -59,5 +93,8 @@ class Route:
     def get_color(self):
         return (255, 255, 255)  # write
 
-    def is_empty(self, car):
+    def is_empty(self, car=None):
         return True
+
+    def is_agent(self):
+        return False
