@@ -34,6 +34,16 @@ class Animation:
                                   self.window_scale,
                                   self.window_scale])
 
+    def draw_cars(self):
+        for car in self.objects:
+            color = car.get_color()
+            pygame.draw.rect(self.screen,
+                             color,
+                             [(self.window_scale) * (car.x - 1),
+                              (self.window_scale) * (car.y - 1),
+                              self.window_scale,
+                              self.window_scale])
+
     def update(self):
         for event in pygame.event.get():
             if event.type == pygame.KEYDOWN:
@@ -54,6 +64,7 @@ class Animation:
                 return False
 
         self.draw_map()
+        self.draw_cars()
         self.print_labels()
         pygame.display.flip()
         return True

@@ -1,3 +1,6 @@
+import random
+
+
 class Task:
 
     def __init__(self, start, end, map):
@@ -8,8 +11,8 @@ class Task:
         self.end = end
         self.state = 'NEW'
         self.car = None
-        self.map.map[self.start[0]][self.start[1]] = Task_Point()
-        self.map.map[self.end[0]][self.end[1]] = Task_Point()
+        # self.map.map[self.start[0]][self.start[1]] = Task_Point()
+        # self.map.map[self.end[0]][self.end[1]] = Task_Point()
 
     def activate(self):
         self.map.map[self.start[0]][self.start[1]] = Task_Start(self.task_id, self)
@@ -23,6 +26,7 @@ class Task:
 
     def complete(self):
         self.state = 'COMPLETED'
+
 
 class Task_Start:
     def __init__(self, task_id, parent):
@@ -74,7 +78,58 @@ class Task_Point:
         return (211, 211, 211)
 
     def is_empty(self, car=None):
-        return False
+        return True
 
     def is_agent(self):
         return False
+
+
+class Spawn_Points:
+
+    def __init__(self, tasks, map, cars):
+        self.tasks = tasks
+        self.map = map
+        self.cars = cars
+        self.points = []
+
+    def add_spawn_point(self, location, spawn_rate):
+        self.points.append((location, spawn_rate))
+        self.map.map[location[0]][location[1]] = Task_Point()
+
+    def create_task(self):
+        start, end = self.get_random_free_points()
+        if start == False:
+            return
+
+        new_task = Task(start, end, self.map)
+        new_task.activate()
+        self.tasks.append(new_task)
+
+    def get_random_free_points(self):
+        free = []
+        for point in self.points:
+            point_loc = point[0]
+            if self.map.map[point_loc[0]][point_loc[1]].__class__.__name__ == 'Task_Point' and self.is_free(
+                    point_loc[0], point_loc[1]):
+                free.append(point)
+
+        if len(free) < 2:
+            return False, False
+
+        start = random.choice(free)
+        free.remove(start)
+        end = random.choice(free)
+
+        return start[0], end[0]
+
+    def refresh_spawn_points(self):
+        for point in self.points:
+            point_loc = point[0]
+            if self.map.map[point_loc[0]][point_loc[1]].__class__.__name__ == 'Route':
+                self.map.map[point_loc[0]][point_loc[1]] = Task_Point()
+
+    def is_free(self, y, x):
+        for car in self.cars:
+            if car.x == x and car.y == y:
+                return False
+        return True
