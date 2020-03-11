@@ -1,4 +1,5 @@
 import numpy as np
+from map import Map
 
 
 class ANode():
@@ -18,8 +19,186 @@ class ANode():
 
 class Central:
 
-    def __init__(self):
-        ...
+    def __init__(self, cars, map, tasks):
+        self.map = map
+        self.cars = cars
+        self.tasks = tasks
+        self.bitmap = self.map.to_bitman_objects()
+        self.time_plans = []
+        self.current_time = 0
+        for i in range(100):
+            self.time_plans.append(self.bitmap.tolist())
+        # self.current_time = 0
+
+        for car in cars:
+            self.time_plans[0][car.y][car.x] = car.id
+
+    def do_step(self):
+        if self.check_change():
+            # print('Replan')
+            self.replan()
+
+        self.move_cars()
+        self.current_time += 1
+
+    def replan(self):
+        for i in range(self.current_time + 1, len(self.time_plans)):
+            self.time_plans[i] = self.bitmap.tolist()
+
+        # print('---------')
+        self.assign_free_agents()
+        # print('assigned')
+        free_agents_plans = []
+        # print(free_agents_plans)
+        for a in self.cars:
+            if a.possible_task is None:
+                continue
+            if a.current_task is None:
+                new_plan = {'id': a.id, 'start': (a.y, a.x), 'end': a.possible_task.start,
+                            'task_end': a.possible_task.end}
+            else:
+                new_plan = {'id': a.id, 'start': (a.y, a.x), 'end': a.current_task.end}
+            free_agents_plans.append(new_plan)
+
+        # print(free_agents_plans)
+        cbs = CBS(self.map.to_bitman_objects(), free_agents_plans)
+        routes = cbs.solve()
+        # print(routes)
+
+        for id, route in routes.items():
+            for i in range(len(route)):
+                if self.current_time + i >= len(self.time_plans):
+                    self.time_plans.append(self.bitmap.tolist())
+                step = route[i]
+                self.time_plans[self.current_time + i][step[0]][step[1]] = id
+        for a in self.cars:
+            if a.id in routes.keys():
+                continue
+            self.time_plans[self.current_time + 1][a.y][a.x] = a.id
+        # self.map.print_map(self.time_plans[self.current_time])
+        # print('====')
+        # self.map.print_map(self.time_plans[self.current_time+1])
+        # i = input('dada')
+
+    def assign_free_agents(self):
+        # print('assign_free_agents')
+        free_agents = self.get_free_agents()
+        free_tasks = self.get_free_tasks()
+
+        metrics = {}
+
+        for t in free_tasks:
+            metrics[t] = []
+            for a in free_agents:
+                route_len = CBS.heuristic((a.y, a.x), t.start)
+                metrics[t].append((a, route_len))
+
+            metrics[t].sort(key=lambda tup: tup[1])
+
+        assignned = {}
+
+        while True:
+            if len(assignned.keys()) == len(free_agents) or len(metrics) == 0:
+                break
+            for a in free_agents:
+                if a in assignned.keys():
+                    continue
+                best_task = None
+                t_len = None
+                for t, arr in metrics.items():
+                    if len(arr) == 0 or not arr[0][0].id == a.id:
+                        continue
+
+                    if best_task is None or t_len > arr[0][1]:
+                        best_task = t
+                        t_len = arr[0][1]
+                if best_task is None:
+                    continue
+                del metrics[best_task]
+                assignned[a] = best_task
+                for t, arr in metrics.items():
+                    if len(arr) > 0 and arr[0][0].id == a.id:
+                        metrics[t].pop(0)
+
+        for key, value in assignned.items():
+            for a in range(len(free_agents)):
+                for t in range(len(free_tasks)):
+                    if free_agents[a] == key and value == free_tasks[t]:
+                        # print(f'Car {key.id} - Task {value.task_id}')
+                        key.possible_task = value
+
+    def get_free_agents(self):
+        free_agents = []
+        # print('Free agents: ')
+        for a in range(len(self.cars)):
+            if self.cars[a].current_task is None and self.cars[a].possible_task is None:
+                free_agents.append(self.cars[a])
+                # print(self.cars[a].id, end=' ')
+        # print('')
+
+        return free_agents
+
+    def get_free_tasks(self):
+        free_tasks = []
+        # print('Free tasks: ')
+        for t in range(len(self.tasks)):
+            free = True
+            for a in range(len(self.cars)):
+                if self.cars[a].possible_task is None:
+                    continue
+                if self.cars[a].possible_task.task_id == self.tasks[t].task_id:
+                    free = False
+                    break
+
+            if free:
+                free_tasks.append(self.tasks[t])
+                # print(self.tasks[t].task_id, end=' ')
+        # print('')
+        return free_tasks
+
+    def check_change(self):
+        assingged_agents = 0
+        for a in self.cars:
+            if a.possible_task is not None:
+                assingged_agents += 1
+        if assingged_agents == len(self.cars):
+            print('No replan1')
+            return False
+        elif assingged_agents == len(self.tasks):
+            print('No replan2')
+            return False
+        return True
+
+    def move_cars(self):
+        # print('\nMove cars')
+        next_state = self.time_plans[self.current_time + 1]
+        curr_state = self.time_plans[self.current_time]
+
+        for i in range(len(self.cars)):
+            car = self.cars[i]
+            res = None
+            # if next_state[car.y][car.x] == curr_state[car.y][car.x]:
+            #    # print(f'Car {car.id} WAIT')
+            #    self.time_plans[self.current_time + 1][car.y][car.x] = car.id
+
+            if next_state[car.y][car.x + 1] == curr_state[car.y][car.x]:
+                res = car.go_right()
+                # print(f'Car {car.id} RIGHT')
+            elif next_state[car.y][car.x - 1] == curr_state[car.y][car.x]:
+                res = car.go_left()
+                # print(f'Car {car.id} LEFTG')
+            elif next_state[car.y + 1][car.x] == curr_state[car.y][car.x]:
+                res = car.go_down()
+                # print(f'Car {car.id} DOWN')
+            elif next_state[car.y - 1][car.x] == curr_state[car.y][car.x]:
+                res = car.go_up()
+                # print(f'Car {car.id} UP')
+            else:
+                # print(f'Car {car.id} ERROR---------!!!!')
+                self.time_plans[self.current_time + 1][car.y][car.x] = car.id
+                # exit()
+            if res == False:
+                print('ERROR CANT MOVE!!!---')
 
 
 class CBS:
@@ -32,54 +211,92 @@ class CBS:
         self.curr_node = None
 
     def solve(self):
+        #print('CBS solve')
         self.OPEN = []
         root = Node()
         self.curr_node = root
+        #print('.')
         self.get_init_solutions()
+        #print('..')
         root.compute_cost()
+        #print('...')
         self.OPEN.append(root)
 
         while len(self.OPEN) > 0:
             self.curr_node = self.get_best_node()  # lowest solution cost
-            res = self.validate_solution()
+            conflicts, edge_conflicts = self.validate_solution()
 
-            if len(res) == 0:
+            if len(conflicts) == 0 and len(edge_conflicts) == 0:
                 return self.curr_node.solution  # goal
+            # Node conflict
+            if len(conflicts) > 0:
+                first_conflict = conflicts[0]
+                # print(first_conflict)
 
-            first_conflict = res[0]
-            print(first_conflict)
-            # MA-CSB optional
-            print('\n')
-            for a in first_conflict['agents']:
-                print(a)
-                new_node = Node()
-                new_node.constraints = self.curr_node.constraints.copy()
-                new_node.add_constraint(a, first_conflict['position'], first_conflict['time'])
-                new_node.solution = self.curr_node.solution.copy()
-                # Update solutions
-                self.update_solution(new_node, a)
-                new_node.compute_cost()
+                # print('\n')
+                for a in first_conflict['agents']:
+                    # print(a)
+                    new_node = Node()
+                    new_node.constraints = self.curr_node.constraints.copy()
+                    new_node.edge_constraints = self.curr_node.edge_constraints.copy()
+                    new_node.add_constraint(a, first_conflict['position'], first_conflict['time'])
+                    new_node.solution = self.curr_node.solution.copy()
+                    # Update solutions
+                    self.update_solution(new_node, a)
+                    new_node.compute_cost()
 
-                print(new_node)
-                if not new_node.cost is None:
-                    self.OPEN.append(new_node)
-                    print('ADDED')
-                print('-------')
-            tmp = input('Ready?')
-            print('----------------------------------------------------------------------')
+                    # print(new_node)
+                    if not new_node.cost is None:
+                        self.OPEN.append(new_node)
+                        # print('ADDED')
+                    # print('-------')
+            # Edge conflict
+            else:
+                first_conflict = edge_conflicts[0]
+                # print(first_conflict)
+
+                # print('\n')
+                for a in first_conflict['agents']:
+                    # print(a)
+                    new_node = Node()
+                    new_node.constraints = self.curr_node.constraints.copy()
+                    new_node.edge_constraints = self.curr_node.edge_constraints.copy()
+                    new_node.add_edge_constraint(a, first_conflict['from'], first_conflict['to'],
+                                                 first_conflict['time'])
+                    new_node.solution = self.curr_node.solution.copy()
+                    # Update solutions
+                    self.update_solution(new_node, a)
+                    new_node.compute_cost()
+
+                    # print(new_node)
+                    if not new_node.cost is None:
+                        self.OPEN.append(new_node)
+                        # print('ADDED')
+                    # print('-------')
+
+            # tmp = input('Ready?')
+            # print('----------------------------------------------------------------------')
 
     def get_init_solutions(self):
+        # Map.print_map(None,self.map)
         for agent in self.agents:
             id = agent['id']
-            print(f'Agent {id}:')
+            # print(f'Agent {id}:')
             start = agent['start']
             end = agent['end']
+            task_end = agent['task_end']
+            print(f'{start} -> {end} -> {task_end}')
+
             route = self.astar(self.curr_node, id, start, end)
-            if route == False:
+            print(route)
+            tmp = input('Ready?')
+            if not route:
+                print('skip')
                 continue
             # route = route[::-1]
-            print(route)
+            # print(route)
             self.curr_node.solution[id] = route
+            # print('agent found')
 
     def update_solution(self, node, agent_id):
         agent = None
@@ -93,7 +310,7 @@ class CBS:
         end = agent['end']
         # print(node.constraints)
         route = self.astar(node, id, start, end)
-        if route == False:
+        if not route:
             node.solution[id] = None
             return
         # route = route[::-1]
@@ -116,6 +333,7 @@ class CBS:
 
     def validate_solution(self):
         conflicts = []
+        edge_conflicts = []
         max_len = 0
         for sol in self.curr_node.solution.values():
             if max_len < len(sol):
@@ -132,6 +350,15 @@ class CBS:
                 else:
                     occupied[sol[i]].append(agent)
 
+                # edge check
+                for agent2, sol2 in self.curr_node.solution.items():
+                    if agent2 == agent or len(sol2) - 1 <= i or len(sol) - 1 <= i:
+                        continue
+                    if sol[i] == sol2[i + 1] and sol[i + 1] == sol2[i]:
+                        # print('EDGE CONFLICT!!!!!')
+                        edge_conflict = {'agents': [agent, agent2], 'from': sol[i], 'to': sol[i + 1], 'time': i}
+                        edge_conflicts.append(edge_conflict)
+
             for key, value in occupied.items():
                 if len(value) < 2:
                     continue
@@ -139,16 +366,32 @@ class CBS:
                 conflicts.append(conflict)
 
         # print(conflicts)
-        return conflicts
+        return conflicts, edge_conflicts
 
-    def heuristic(self, a, b):
+    @staticmethod
+    def heuristic(a, b):
         return np.sqrt((b[0] - a[0]) ** 2 + (b[1] - a[1]) ** 2)
 
-    def check_constrain(self, node, agent_id, position, time):
+    def check_constrain(self, node, agent_id, time, position, from_):
+
         for c in node.constraints:
             if c[0] == agent_id and c[1] == position and c[2] == time:
                 # print('--------------------- SKIP')
                 return False
+        if len(node.edge_constraints) == 0:
+            return True
+
+        # print(node.edge_constraints)
+        # print(f'Agent: {agent_id} Time: {time} From: {from_} To: {position}' )
+
+        for e in node.edge_constraints:
+            if e[0] == agent_id and e[3] == time - 1 and (
+                    (e[1] == position and e[2] == from_) or (e[2] == position and e[1] == from_)):
+                # print('FALSE')
+                # tmp = input('Ready?')
+                return False
+
+        # print('TRUE')
 
         return True
 
@@ -156,6 +399,7 @@ class CBS:
         """Returns a list of tuples as a path from the given start to the given end in the given maze"""
 
         # Create start and end node
+        #print('a star')
         start_node = ANode(None, start)
         start_node.g = start_node.h = start_node.f = 0
         end_node = ANode(None, end)
@@ -176,7 +420,7 @@ class CBS:
             current_index = 0
             for index, item in enumerate(open_list):
                 if item.f < current_node.f:
-                    current_node = item
+                    current_node = open_list[index]
                     current_index = index
 
             # Pop current off open list, add to closed list
@@ -206,8 +450,16 @@ class CBS:
                     continue
 
                 # Make sure walkable terrain
-                if self.map[node_position[0]][node_position[1]] != 0 or not self.check_constrain(node, agent_id, (
-                node_position[0], node_position[1]), current_node.g + 1):
+                if self.map[node_position[0]][node_position[1]] != 0 or not self.check_constrain(node, agent_id,
+                                                                                                 current_node.g + 1, (
+                                                                                                         node_position[
+                                                                                                             0],
+                                                                                                         node_position[
+                                                                                                             1]), (
+                                                                                                         current_node.position[
+                                                                                                             0],
+                                                                                                         current_node.position[
+                                                                                                             1])):
                     continue
 
                 # Create new node
@@ -218,25 +470,34 @@ class CBS:
 
             # Loop through children
             for child in children:
-
-                # Child is on the closed list
-                for closed_child in closed_list:
-                    if child == closed_child and not current_node.position == new_node.position:
-                        continue
-
                 # Create the f, g, and h values
                 child.g = current_node.g + 1
                 child.h = ((child.position[0] - end_node.position[0]) ** 2) + (
                         (child.position[1] - end_node.position[1]) ** 2)
                 child.f = child.g + child.h
+                # Child is on the closed list
+                skip = False
+                for closed_child in closed_list:
+                    if child == closed_child and closed_child.f == child.f:
+                        skip = True
+                        break
+                if skip:
+                    continue
 
                 # Child is already in the open list
+                skip = False
                 for open_node in open_list:
-                    if child == open_node and child.g > open_node.g:
-                        continue
+                    if child == open_node and child.f >= open_node.f:
+                        skip = True
+                        break
+
+                if skip:
+                    continue
 
                 # Add the child to the open list
                 open_list.append(child)
+
+        return False
 
 
 class Node:
@@ -244,6 +505,7 @@ class Node:
     def __init__(self):
         self.solution = {}
         self.constraints = []
+        self.edge_constraints = []
         self.cost = None
 
     def set_solution(self):
@@ -251,6 +513,9 @@ class Node:
 
     def add_constraint(self, agent, position, time):
         self.constraints.append((agent, position, time))
+
+    def add_edge_constraint(self, agent, v1, v2, time):
+        self.edge_constraints.append((agent, v1, v2, time))
 
     def compute_cost(self):
         cost = 0
@@ -266,21 +531,23 @@ class Node:
         ...
 
     def __str__(self):
-        return f'Solutions: {self.solution}\nConstrains: {self.constraints}\nCost: {self.cost}\n'
+        return f'Solutions: {self.solution}\nConstraints: {self.constraints}\nEdge_constraints: {self.edge_constraints}\nCost: {self.cost}\n'
 
 
-map = [
-    [0, 0, 0, 0],
-    [0, 0, 0, 0],
-    [0, 0, 0, 0],
-    [0, 0, 0, 0]
-]
+if __name__ == '__main__':
+    map = [
+        [0, 0, 0, 0],
+        [1, 0, 1, 0],
+        [1, 0, 1, 0],
+        [1, 0, 1, 0],
+        [0, 0, 0, 0]
+    ]
 
-agents = [{'id': 1, 'start': (0, 1), 'end': (3, 2)},
-          {'id': 2, 'start': (1, 0), 'end': (2, 3)}]
+    agents = [{'id': 1, 'start': (0, 1), 'end': (4, 1)},
+              {'id': 2, 'start': (4, 1), 'end': (0, 1)}]
 
-cbs = CBS(map=map, agents=agents)
+    cbs = CBS(map=map, agents=agents)
 
-final_sol = cbs.solve()
-print('==================')
-print(final_sol)
+    final_sol = cbs.solve()
+    print('==================')
+    print(final_sol)

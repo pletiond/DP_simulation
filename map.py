@@ -61,7 +61,7 @@ class Map:
     def check_point(self, car):
         if self.map[car.y][car.x].__class__.__name__ == 'Task_Start':
             if car.current_task is None:
-                print(f'Car {car.id} hsa new task')
+                # print(f'Car {car.id} has new task')
                 car.current_task = self.map[car.y][car.x].parent
                 self.map[car.y][car.x].parent.assign(car)
                 self.map[car.y][car.x] = Task_Point()
