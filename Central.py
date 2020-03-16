@@ -51,19 +51,26 @@ class Central:
         free_agents_plans = []
         # print(free_agents_plans)
         for a in self.cars:
+            # print(a.id)
             if a.possible_task is None:
+                #print('No possible')
                 continue
             if a.current_task is None:
+                #print('No current')
                 new_plan = {'id': a.id, 'start': (a.y, a.x), 'end': a.possible_task.start,
                             'task_end': a.possible_task.end}
-            else:
-                new_plan = {'id': a.id, 'start': (a.y, a.x), 'end': a.current_task.end}
-            free_agents_plans.append(new_plan)
-
+                free_agents_plans.append(new_plan)
+            elif a.current_task is not None:
+                # print('Current')
+                new_plan = {'id': a.id, 'start': (a.y, a.x), 'end': None,
+                            'task_end': a.possible_task.end}
+                free_agents_plans.append(new_plan)
+        #print(free_agents_plans)
         # print(free_agents_plans)
         cbs = CBS(self.map.to_bitman_objects(), free_agents_plans)
         routes = cbs.solve()
-        # print(routes)
+
+        #print(routes)
 
         for id, route in routes.items():
             for i in range(len(route)):
@@ -78,7 +85,7 @@ class Central:
         # self.map.print_map(self.time_plans[self.current_time])
         # print('====')
         # self.map.print_map(self.time_plans[self.current_time+1])
-        # i = input('dada')
+        #i = input('dada')
 
     def assign_free_agents(self):
         # print('assign_free_agents')
@@ -157,15 +164,14 @@ class Central:
         return free_tasks
 
     def check_change(self):
+        return True
         assingged_agents = 0
         for a in self.cars:
             if a.possible_task is not None:
                 assingged_agents += 1
         if assingged_agents == len(self.cars):
-            print('No replan1')
             return False
         elif assingged_agents == len(self.tasks):
-            print('No replan2')
             return False
         return True
 
@@ -211,15 +217,15 @@ class CBS:
         self.curr_node = None
 
     def solve(self):
-        #print('CBS solve')
+        # print('CBS solve')
         self.OPEN = []
         root = Node()
         self.curr_node = root
-        #print('.')
+        # print('.')
         self.get_init_solutions()
-        #print('..')
+        # print('..')
         root.compute_cost()
-        #print('...')
+        # print('...')
         self.OPEN.append(root)
 
         while len(self.OPEN) > 0:
@@ -279,26 +285,40 @@ class CBS:
 
     def get_init_solutions(self):
         # Map.print_map(None,self.map)
+        #print('Init----')
         for agent in self.agents:
             id = agent['id']
             # print(f'Agent {id}:')
             start = agent['start']
             end = agent['end']
             task_end = agent['task_end']
-            print(f'{start} -> {end} -> {task_end}')
-
-            route = self.astar(self.curr_node, id, start, end)
-            print(route)
-            tmp = input('Ready?')
-            if not route:
-                print('skip')
+            if end is None:
+                route_to_end = self.astar(self.curr_node, id, start, task_end)
+                if not route_to_end:
+                    # print('skip')
+                    continue
+                self.curr_node.solution[id] = route_to_end
                 continue
-            # route = route[::-1]
-            # print(route)
-            self.curr_node.solution[id] = route
-            # print('agent found')
+
+            # print(f'{start} -> {end} -> {task_end}')
+
+            route_to_task = self.astar(self.curr_node, id, start, end)
+            # print(route_to_task)
+
+            if not route_to_task:
+                # print('skip')
+                continue
+            route_to_end = self.astar(self.curr_node, id, end, task_end)
+            if not route_to_end:
+                # print('skip')
+                continue
+            # print(route_to_end)
+            merged_routes = route_to_task[0:-1] + route_to_end
+
+            self.curr_node.solution[id] = merged_routes
 
     def update_solution(self, node, agent_id):
+        #print('Update----')
         agent = None
         for a in self.agents:
             if a['id'] == agent_id:
@@ -308,14 +328,25 @@ class CBS:
         # print(f'Agent {id}:')
         start = agent['start']
         end = agent['end']
-        # print(node.constraints)
-        route = self.astar(node, id, start, end)
-        if not route:
+        task_end = agent['task_end']
+
+        if end is None:
+            route_to_end = self.astar(node, id, start, task_end)
+            if not route_to_end:
+                node.solution[id] = None
+                return
+            node.solution[id] = route_to_end
+            return
+
+        route_to_task = self.astar(node, id, start, end)
+        route_to_end = self.astar(node, id, end, task_end, offset=len(route_to_task) - 1)
+        if not route_to_task or not route_to_end:
             node.solution[id] = None
             return
-        # route = route[::-1]
-        # print(route)
-        node.solution[id] = route
+        merged_routes = route_to_task[0:-1] + route_to_end
+        # print(merged_routes)
+        node.solution[id] = merged_routes
+        # tmp = input('Ready?')
 
     def get_best_node(self):
         best_node = None
@@ -395,11 +426,11 @@ class CBS:
 
         return True
 
-    def astar(self, node, agent_id, start, end):
+    def astar(self, node, agent_id, start, end, offset=0):
         """Returns a list of tuples as a path from the given start to the given end in the given maze"""
 
         # Create start and end node
-        #print('a star')
+        # print('a star')
         start_node = ANode(None, start)
         start_node.g = start_node.h = start_node.f = 0
         end_node = ANode(None, end)
@@ -451,7 +482,8 @@ class CBS:
 
                 # Make sure walkable terrain
                 if self.map[node_position[0]][node_position[1]] != 0 or not self.check_constrain(node, agent_id,
-                                                                                                 current_node.g + 1, (
+                                                                                                 current_node.g + 1 + offset,
+                                                                                                 (
                                                                                                          node_position[
                                                                                                              0],
                                                                                                          node_position[

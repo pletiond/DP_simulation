@@ -138,7 +138,9 @@ def get_small_spawn_case1():
 
     car1 = Car((1, 2), map)
     car2 = Car((7, 6), map)
-    cars = [car1, car2]
+    car3 = Car((7, 2), map)
+    car4 = Car((1, 6), map)
+    cars = [car1, car2, car3, car4]
 
     tasks = []
     spawn_points = Spawn_Points(tasks, map, cars)
@@ -148,7 +150,10 @@ def get_small_spawn_case1():
     spawn_points.add_spawn_point((6, 1), 1)
     spawn_points.add_spawn_point((1, 4), 1)
     spawn_points.add_spawn_point((7, 4), 1)
+
     spawn_points.add_spawn_point((1, 2), 1)
     spawn_points.add_spawn_point((7, 6), 1)
+    spawn_points.add_spawn_point((7, 2), 1)
+    spawn_points.add_spawn_point((1, 6), 1)
 
     return map, tasks, cars, spawn_points

@@ -11,8 +11,8 @@ from defined_maps import *
 map, tasks, cars, spawn_points = get_small_spawn_case1()
 
 SPAWN_RATE = 10
-WINDOW_SCALE = 12
-SPEED = 3
+WINDOW_SCALE = 40
+SPEED = 2
 
 completed_tasks = []
 animation = Animation(map, window_scale=WINDOW_SCALE, objects=cars, tasks=tasks)
@@ -33,7 +33,7 @@ while True:
     if not animation.update():
         break
 
-    #animation.clock.tick(SPEED)
+    animation.clock.tick(SPEED)
     # i = input('Continue...')
     # TP.do_step()
     central.do_step()
@@ -49,5 +49,5 @@ while True:
 
         if not found:
             break
-    i = input('dada')
+    #i = input('dada')
     step += 1
