@@ -1,13 +1,15 @@
 import numpy as np
 from map import Map
+from task import *
 
 
 class ANode():
     """A node class for A* Pathfinding"""
 
-    def __init__(self, parent=None, position=None):
+    def __init__(self, parent=None, position=None, orientation=None):
         self.parent = parent
         self.position = position
+        self.orientation = orientation
 
         self.g = 0
         self.h = 0
@@ -34,6 +36,8 @@ class Central:
             self.time_plans[0][car.y][car.x] = car.id
 
     def do_step(self):
+        self.check_tasks()
+
         if self.check_change():
             # print('Replan')
             self.replan()
@@ -41,36 +45,53 @@ class Central:
         self.move_cars()
         self.current_time += 1
 
+    def check_tasks(self):
+        for t in range(len(self.tasks)):
+            task = self.tasks[t]
+            for c in range(len(self.cars)):
+                car = self.cars[c]
+                car_pos = (car.y, car.x)
+                if car_pos == task.start and car.current_task is None and task.car is None:
+                    car.current_task = task
+                    car.possible_task = task
+                    task.assign(car)
+                    self.map.map[car.y][car.x] = Task_Point()
+                elif car_pos == task.end and car.current_task is not None and car.current_task.task_id == task.task_id:
+                    car.current_task = None
+                    car.possible_task = None
+                    task.complete()
+                    self.map.map[car.y][car.x] = Task_Point()
+
     def replan(self):
         for i in range(self.current_time + 1, len(self.time_plans)):
             self.time_plans[i] = self.bitmap.tolist()
 
-        # print('---------')
         self.assign_free_agents()
-        # print('assigned')
+
         free_agents_plans = []
-        # print(free_agents_plans)
+
         for a in self.cars:
-            # print(a.id)
+            print('======')
+
             if a.possible_task is None:
-                #print('No possible')
+                print(f'Car {a.id}      - -')
                 continue
+            # print(f'Car {a.y} - {a.x}   Task {a.possible_task.start} -> {a.possible_task.end}  Current: {a.current_task is not None}')
             if a.current_task is None:
-                #print('No current')
-                new_plan = {'id': a.id, 'start': (a.y, a.x), 'end': a.possible_task.start,
+                print(f'Car {a.id}       {a.possible_task.task_id} -')
+                new_plan = {'id': a.id, 'orientation': a.orientation, 'start': (a.y, a.x), 'end': a.possible_task.start,
                             'task_end': a.possible_task.end}
                 free_agents_plans.append(new_plan)
             elif a.current_task is not None:
-                # print('Current')
-                new_plan = {'id': a.id, 'start': (a.y, a.x), 'end': None,
+                print(f'Car {a.id}        {a.possible_task.task_id} {a.current_task.task_id}')
+                new_plan = {'id': a.id, 'orientation': a.orientation, 'start': (a.y, a.x), 'end': None,
                             'task_end': a.possible_task.end}
                 free_agents_plans.append(new_plan)
-        #print(free_agents_plans)
-        # print(free_agents_plans)
+
         cbs = CBS(self.map.to_bitman_objects(), free_agents_plans)
         routes = cbs.solve()
 
-        #print(routes)
+        # print(routes)
 
         for id, route in routes.items():
             for i in range(len(route)):
@@ -82,13 +103,8 @@ class Central:
             if a.id in routes.keys():
                 continue
             self.time_plans[self.current_time + 1][a.y][a.x] = a.id
-        # self.map.print_map(self.time_plans[self.current_time])
-        # print('====')
-        # self.map.print_map(self.time_plans[self.current_time+1])
-        #i = input('dada')
 
     def assign_free_agents(self):
-        # print('assign_free_agents')
         free_agents = self.get_free_agents()
         free_tasks = self.get_free_tasks()
 
@@ -136,18 +152,14 @@ class Central:
 
     def get_free_agents(self):
         free_agents = []
-        # print('Free agents: ')
         for a in range(len(self.cars)):
             if self.cars[a].current_task is None and self.cars[a].possible_task is None:
                 free_agents.append(self.cars[a])
-                # print(self.cars[a].id, end=' ')
-        # print('')
 
         return free_agents
 
     def get_free_tasks(self):
         free_tasks = []
-        # print('Free tasks: ')
         for t in range(len(self.tasks)):
             free = True
             for a in range(len(self.cars)):
@@ -159,8 +171,7 @@ class Central:
 
             if free:
                 free_tasks.append(self.tasks[t])
-                # print(self.tasks[t].task_id, end=' ')
-        # print('')
+
         return free_tasks
 
     def check_change(self):
@@ -285,15 +296,16 @@ class CBS:
 
     def get_init_solutions(self):
         # Map.print_map(None,self.map)
-        #print('Init----')
+        # print('Init----')
         for agent in self.agents:
             id = agent['id']
+            orientation = agent['orientation']
             # print(f'Agent {id}:')
             start = agent['start']
             end = agent['end']
             task_end = agent['task_end']
             if end is None:
-                route_to_end = self.astar(self.curr_node, id, start, task_end)
+                route_to_end, orientation = self.astar(self.curr_node, id, orientation, start, task_end)
                 if not route_to_end:
                     # print('skip')
                     continue
@@ -302,13 +314,13 @@ class CBS:
 
             # print(f'{start} -> {end} -> {task_end}')
 
-            route_to_task = self.astar(self.curr_node, id, start, end)
+            route_to_task, orientation = self.astar(self.curr_node, id, orientation, start, end)
             # print(route_to_task)
 
             if not route_to_task:
                 # print('skip')
                 continue
-            route_to_end = self.astar(self.curr_node, id, end, task_end)
+            route_to_end, orientation = self.astar(self.curr_node, id, orientation, end, task_end)
             if not route_to_end:
                 # print('skip')
                 continue
@@ -318,28 +330,29 @@ class CBS:
             self.curr_node.solution[id] = merged_routes
 
     def update_solution(self, node, agent_id):
-        #print('Update----')
+        # print('Update----')
         agent = None
         for a in self.agents:
             if a['id'] == agent_id:
                 agent = a.copy()
                 break
         id = agent['id']
+        orientation = agent['orientation']
         # print(f'Agent {id}:')
         start = agent['start']
         end = agent['end']
         task_end = agent['task_end']
 
         if end is None:
-            route_to_end = self.astar(node, id, start, task_end)
+            route_to_end, orientation = self.astar(node, id, orientation, start, task_end)
             if not route_to_end:
                 node.solution[id] = None
                 return
             node.solution[id] = route_to_end
             return
 
-        route_to_task = self.astar(node, id, start, end)
-        route_to_end = self.astar(node, id, end, task_end, offset=len(route_to_task) - 1)
+        route_to_task, orientation = self.astar(node, id, orientation, start, end)
+        route_to_end, orientation = self.astar(node, id, orientation, end, task_end, offset=len(route_to_task) - 1)
         if not route_to_task or not route_to_end:
             node.solution[id] = None
             return
@@ -385,7 +398,7 @@ class CBS:
                 for agent2, sol2 in self.curr_node.solution.items():
                     if agent2 == agent or len(sol2) - 1 <= i or len(sol) - 1 <= i:
                         continue
-                    if sol[i] == sol2[i + 1] and sol[i + 1] == sol2[i]:
+                    if sol[i] == sol2[i] and sol[i + 1] == sol2[i + 1]:
                         # print('EDGE CONFLICT!!!!!')
                         edge_conflict = {'agents': [agent, agent2], 'from': sol[i], 'to': sol[i + 1], 'time': i}
                         edge_conflicts.append(edge_conflict)
@@ -394,7 +407,7 @@ class CBS:
                 if len(value) < 2:
                     continue
                 conflict = {'agents': value, 'position': key, 'time': i}
-                conflicts.append(conflict)
+                # conflicts.append(conflict)
 
         # print(conflicts)
         return conflicts, edge_conflicts
@@ -426,13 +439,14 @@ class CBS:
 
         return True
 
-    def astar(self, node, agent_id, start, end, offset=0):
+    def astar(self, node, agent_id, orientation, start, end, offset=0):
         """Returns a list of tuples as a path from the given start to the given end in the given maze"""
 
         # Create start and end node
         # print('a star')
         start_node = ANode(None, start)
         start_node.g = start_node.h = start_node.f = 0
+        start_node.orientation = orientation
         end_node = ANode(None, end)
         end_node.g = end_node.h = end_node.f = 0
 
@@ -465,13 +479,14 @@ class CBS:
                 while current is not None:
                     path.append(current.position)
                     current = current.parent
-                return path[::-1]  # Return reversed path
+                return path[::-1], current_node.orientation  # Return reversed path
 
             # Generate children
             children = []
-            for new_position in [(0, -1), (0, 1), (-1, 0), (1, 0),
-                                 (0, 0)]:  # Adjacent squares , (-1, -1), (-1, 1), (1, -1), (1, 1)
-
+            directions = [(0, -1), (-1, 0), (0, 1), (1, 0)]
+            for new_position in directions + [(0, 0)]:
+                if new_position == directions[(current_node.orientation + 2) % 4]:
+                    continue
                 # Get node position
                 node_position = (current_node.position[0] + new_position[0], current_node.position[1] + new_position[1])
 
@@ -495,7 +510,14 @@ class CBS:
                     continue
 
                 # Create new node
-                new_node = ANode(current_node, node_position)
+                new_orientation = None
+                if new_position == (0, 0) or new_position == directions[current_node.orientation]:
+                    new_orientation = current_node.orientation
+                elif new_position == directions[(current_node.orientation - 1) % 4]:
+                    new_orientation = (current_node.orientation - 1) % 4
+                elif new_position == directions[(current_node.orientation + 1) % 4]:
+                    new_orientation = (current_node.orientation + 1) % 4
+                new_node = ANode(current_node, node_position, new_orientation)
 
                 # Append
                 children.append(new_node)
@@ -510,7 +532,7 @@ class CBS:
                 # Child is on the closed list
                 skip = False
                 for closed_child in closed_list:
-                    if child == closed_child and closed_child.f == child.f:
+                    if child == closed_child and closed_child.f == child.f and child.orientation == closed_child.orientation:
                         skip = True
                         break
                 if skip:
@@ -519,7 +541,7 @@ class CBS:
                 # Child is already in the open list
                 skip = False
                 for open_node in open_list:
-                    if child == open_node and child.f >= open_node.f:
+                    if child == open_node and child.f >= open_node.f and child.orientation == open_node.orientation:
                         skip = True
                         break
 

@@ -65,6 +65,7 @@ class Map:
                 car.current_task = self.map[car.y][car.x].parent
                 self.map[car.y][car.x].parent.assign(car)
                 self.map[car.y][car.x] = Task_Point()
+                return True
 
         if self.map[car.y][car.x].__class__.__name__ == 'Task_End':
             if car.current_task.task_id == self.map[car.y][car.x].task_id:
@@ -72,7 +73,8 @@ class Map:
                 car.possible_task = None
                 self.map[car.y][car.x].parent.complete()
                 self.map[car.y][car.x] = Task_Point()
-
+                return True
+        return False
 
     def print_map(self, map):
         for i in range(len(map)):

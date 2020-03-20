@@ -160,7 +160,45 @@ class T_up:
         points.append((self.position[1] + self.tile_len, self.position[0] + self.tile_len * 0.15))
 
         points.append((self.position[1] + 0.85 * self.tile_len, self.position[0]))
-        points.append((self.position[1] + 0.12 * self.tile_len, self.position[0]))
+        points.append((self.position[1] + 0.15 * self.tile_len, self.position[0]))
+
+        pygame.draw.polygon(screen, colors['GREY'], points)
+
+
+class T_right:
+    def __init__(self, position, tile_len):
+        self.position = position
+        self.tile_len = tile_len
+
+    def draw(self, screen):
+        points = []
+        points.append((self.position[1] + self.tile_len * 0.15, self.position[0]))
+        points.append((self.position[1] + self.tile_len * 0.85, self.position[0]))
+
+        points.append((self.position[1] + self.tile_len, self.position[0] + self.tile_len * 0.15))
+        points.append((self.position[1] + self.tile_len, self.position[0] + self.tile_len * 0.85))
+
+        points.append((self.position[1] + 0.85 * self.tile_len, self.position[0] + self.tile_len))
+        points.append((self.position[1] + 0.15 * self.tile_len, self.position[0] + self.tile_len))
+
+        pygame.draw.polygon(screen, colors['GREY'], points)
+
+
+class T_left:
+    def __init__(self, position, tile_len):
+        self.position = position
+        self.tile_len = tile_len
+
+    def draw(self, screen):
+        points = []
+        points.append((self.position[1] + self.tile_len * 0.15, self.position[0]))
+        points.append((self.position[1] + self.tile_len * 0.85, self.position[0]))
+
+        points.append((self.position[1] + 0.85 * self.tile_len, self.position[0] + self.tile_len))
+        points.append((self.position[1] + 0.15 * self.tile_len, self.position[0] + self.tile_len))
+
+        points.append((self.position[1], self.position[0] + self.tile_len * 0.85))
+        points.append((self.position[1], self.position[0] + self.tile_len * 0.15))
 
         pygame.draw.polygon(screen, colors['GREY'], points)
 
@@ -173,18 +211,50 @@ class X_crossroads:
 
     def draw(self, screen):
         points = []
-        points.append((self.position[1], self.position[0] + 0.25 * self.tile_len))
-        points.append((self.position[1], self.position[0] + 0.75 * self.tile_len))
+        points.append((self.position[1], self.position[0] + 0.15 * self.tile_len))
+        points.append((self.position[1], self.position[0] + 0.85 * self.tile_len))
 
-        points.append((self.position[1] + 0.25 * self.tile_len, self.position[0] + self.tile_len))
-        points.append((self.position[1] + 0.75 * self.tile_len, self.position[0] + self.tile_len))
+        points.append((self.position[1] + 0.15 * self.tile_len, self.position[0] + self.tile_len))
+        points.append((self.position[1] + 0.85 * self.tile_len, self.position[0] + self.tile_len))
 
-        points.append((self.position[1] + self.tile_len, self.position[0] + self.tile_len * 0.75))
-        points.append((self.position[1] + self.tile_len, self.position[0] + self.tile_len * 0.25))
+        points.append((self.position[1] + self.tile_len, self.position[0] + self.tile_len * 0.85))
+        points.append((self.position[1] + self.tile_len, self.position[0] + self.tile_len * 0.15))
 
-        points.append((self.position[1] + self.tile_len * 0.75, self.position[0]))
-        points.append((self.position[1] + self.tile_len * 0.25, self.position[0]))
+        points.append((self.position[1] + self.tile_len * 0.85, self.position[0]))
+        points.append((self.position[1] + self.tile_len * 0.15, self.position[0]))
 
         pygame.draw.polygon(screen, colors['GREY'], points)
 
 # ------------------------------------------------------------------------------------------------------------------------
+class Task_Down:
+    def __init__(self, position, tile_len):
+        self.position = position
+        self.tile_len = tile_len
+
+    def draw(self, screen):
+        points = []
+        points.append((self.position[1] + self.tile_len * 0.15, self.position[0] + self.tile_len * 0.3))
+        points.append((self.position[1] + self.tile_len * 0.5, self.position[0] + self.tile_len * 0.2))
+        points.append((self.position[1] + self.tile_len * 0.85, self.position[0] + self.tile_len * 0.3))
+
+        points.append((self.position[1] + self.tile_len, self.position[0] + self.tile_len * 1.15))
+        points.append((self.position[1], self.position[0] + self.tile_len * 1.15))
+
+        pygame.draw.polygon(screen, colors['GREY'], points)
+
+
+class Task_Up:
+    def __init__(self, position, tile_len):
+        self.position = position
+        self.tile_len = tile_len
+
+    def draw(self, screen):
+        points = []
+        points.append((self.position[1] + self.tile_len * 0.15, self.position[0] + self.tile_len * 0.3))
+        points.append((self.position[1] + self.tile_len * 0.5, self.position[0] + self.tile_len * 0.2))
+        points.append((self.position[1] + self.tile_len * 0.85, self.position[0] + self.tile_len * 0.3))
+
+        points.append((self.position[1] + self.tile_len, self.position[0] + self.tile_len * 1.15))
+        points.append((self.position[1], self.position[0] + self.tile_len * 1.15))
+
+        pygame.draw.polygon(screen, colors['GREY'], points)

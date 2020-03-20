@@ -15,8 +15,8 @@ class Task:
         # self.map.map[self.end[0]][self.end[1]] = Task_Point()
 
     def activate(self):
-        self.map.map[self.start[0]][self.start[1]] = Task_Start(self.task_id, self)
-        self.map.map[self.end[0]][self.end[1]] = Task_End(self.task_id, self)
+        # self.map.map[self.start[0]][self.start[1]] = Task_Start(self.task_id, self)
+        # self.map.map[self.end[0]][self.end[1]] = Task_End(self.task_id, self)
         self.state = 'ACTIVATED'
         self.car = None
 
@@ -40,8 +40,10 @@ class Task_Start:
         if car is None:
             return True
         if car.current_task is None:
+            print("ASSIGN--------")
             car.current_task = self.parent
             self.parent.assign(car)
+            car.turn_round()
             return True
         else:
             return False
@@ -64,6 +66,7 @@ class Task_End:
         if car.current_task.task_id == self.task_id:
             car.current_task = None
             car.possible_task = None
+            car.turn_round()
             self.parent.complete()
             return True
         else:
@@ -92,9 +95,9 @@ class Spawn_Points:
         self.cars = cars
         self.points = []
 
-    def add_spawn_point(self, location, spawn_rate):
-        self.points.append((location, spawn_rate))
-        self.map.map[location[0]][location[1]] = Task_Point()
+    def add_spawn_point(self, location, spawn_rate, orientation):
+        self.points.append((location, spawn_rate, orientation))
+        #self.map.map[location[0]][location[1]] = Task_Point()
 
     def create_task(self):
         start, end = self.get_random_free_points()
@@ -109,9 +112,9 @@ class Spawn_Points:
         free = []
         for point in self.points:
             point_loc = point[0]
-            if self.map.map[point_loc[0]][point_loc[1]].__class__.__name__ == 'Task_Point' and self.is_free(
-                    point_loc[0], point_loc[1]):
-                free.append(point)
+            # if self.map.map[point_loc[0]][point_loc[1]].__class__.__name__ == 'Task_Point' and self.is_free(
+            #        point_loc[0], point_loc[1]):
+            free.append(point)
 
         if len(free) < 2:
             return False, False

@@ -1,5 +1,6 @@
-from car import *
+from Car import *
 from task import *
+from Visualization import *
 
 
 def get_small_test_case1():
@@ -155,5 +156,39 @@ def get_small_spawn_case1():
     spawn_points.add_spawn_point((7, 6), 1)
     spawn_points.add_spawn_point((7, 2), 1)
     spawn_points.add_spawn_point((1, 6), 1)
+
+    return map, tasks, cars, spawn_points
+
+
+def get_large_map1(tile_len, speed):
+    width = 13
+    height = 13
+    map = Map(width=width, height=height)
+
+    for i in range(1, width + 1, 4):
+        map.add_route((1, i), (height + 1, i))
+    for i in range(1, height + 3, 3):
+        map.add_route((i, 0), (i, width + 1))
+
+    cars = [
+        Car((1, 2), map, tile_len, 'RIGHT', speed),
+        Car((2, 1), map, tile_len, 'DOWN', speed),
+
+        Car((1, 12), map, tile_len, 'LEFT', speed),
+        Car((2, 13), map, tile_len, 'DOWN', speed),
+
+        Car((12, 1), map, tile_len, 'UP', speed),
+        Car((13, 2), map, tile_len, 'RIGHT', speed),
+
+        Car((12, 13), map, tile_len, 'UP', speed),
+        Car((13, 12), map, tile_len, 'LEFT', speed)
+
+    ]
+    tasks = []
+    spawn_points = Spawn_Points(tasks, map, cars)
+    for i in range(2, height - 2, 3):
+        print((2, i))
+        spawn_points.add_spawn_point((i + 2, 3), 1, 'DOWN')
+        spawn_points.add_spawn_point((i + 2, 11), 1, 'DOWN')
 
     return map, tasks, cars, spawn_points
