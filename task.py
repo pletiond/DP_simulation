@@ -111,11 +111,15 @@ class Spawn_Points:
     def get_random_free_points(self):
         free = []
         for point in self.points:
-            point_loc = point[0]
-            # if self.map.map[point_loc[0]][point_loc[1]].__class__.__name__ == 'Task_Point' and self.is_free(
-            #        point_loc[0], point_loc[1]):
+            skip = False
+            for t in self.tasks:
+                if t.start == point[0] or t.end == point[0]:
+                    skip = True
+                    break
+            if skip:
+                continue
             free.append(point)
-
+        print(f'Free task points: {len(free)}')
         if len(free) < 2:
             return False, False
 

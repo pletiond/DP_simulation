@@ -36,6 +36,7 @@ class Central:
             self.time_plans[0][car.y][car.x] = car.id
 
     def do_step(self):
+        i = input('waiting...')
         self.check_tasks()
 
         if self.check_change():
@@ -71,7 +72,7 @@ class Central:
         free_agents_plans = []
 
         for a in self.cars:
-            print('======')
+
 
             if a.possible_task is None:
                 print(f'Car {a.id}      - -')
@@ -87,7 +88,7 @@ class Central:
                 new_plan = {'id': a.id, 'orientation': a.orientation, 'start': (a.y, a.x), 'end': None,
                             'task_end': a.possible_task.end}
                 free_agents_plans.append(new_plan)
-
+        print('------------------------')
         cbs = CBS(self.map.to_bitman_objects(), free_agents_plans)
         routes = cbs.solve()
 
@@ -107,6 +108,8 @@ class Central:
     def assign_free_agents(self):
         free_agents = self.get_free_agents()
         free_tasks = self.get_free_tasks()
+        print(f'Free tasks: {len(free_tasks)}')
+        print(f'Free agents: {len(free_agents)}')
 
         metrics = {}
 
