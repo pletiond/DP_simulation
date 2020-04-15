@@ -1,5 +1,4 @@
 from map import *
-import numpy as np
 import math
 import pygame
 
@@ -25,7 +24,6 @@ class Car:
         pygame.draw.line(self.image, (255, 255, 0), (size[0] * 0.9, 0), (size[0] * 0.9, size[1]), 5)
         self.image.set_colorkey(0)
         self.speed = speed
-        self.buffer = []
         self.orientation = orientations.index(orientation)
 
         if orientation == 'RIGHT':
@@ -45,6 +43,7 @@ class Car:
         self.steps_to_goal = []
 
     def go_up(self):
+        self.correct_position()
         self.y -= 1
         # turn_round = self.map.check_point(self)
         if self.orientation == 0:
@@ -54,16 +53,21 @@ class Car:
         elif self.orientation == 2:
             self.go_left_vis()
         else:
-            print('ERROR!------------')
+            print('ERROR!------------up')
+            print(self.id)
+            exit(0)
 
 
     def go_down(self):
+        self.correct_position()
         self.y += 1
-        # turn_round = self.map.check_point(self)
+
         if self.orientation == 0:
             self.go_left_vis()
         elif self.orientation == 1:
-            print('ERROR!------------')
+            print('ERROR!------------down')
+            print(self.id)
+            exit(0)
         elif self.orientation == 2:
             self.go_right_vis()
         else:
@@ -71,10 +75,13 @@ class Car:
 
 
     def go_right(self):
+        self.correct_position()
         self.x += 1
-        # turn_round = self.map.check_point(self)
+
         if self.orientation == 0:
-            print('ERROR!------------')
+            print('ERROR!------------right')
+            print(self.id)
+            exit(0)
         elif self.orientation == 1:
             self.go_right_vis()
         elif self.orientation == 2:
@@ -84,17 +91,23 @@ class Car:
 
 
     def go_left(self):
+        self.correct_position()
         self.x -= 1
-        # turn_round = self.map.check_point(self)
+
         if self.orientation == 0:
             self.go_step_straight_vis()
         elif self.orientation == 1:
             self.go_left_vis()
         elif self.orientation == 2:
-            print('ERROR!------------')
+            print('ERROR!------------left')
+            print(self.id)
+            exit(0)
         else:
             self.go_right_vis()
 
+    def wait(self):
+        self.correct_position()
+        self.steps_to_goal = []
 
     def get_color(self):
         if self.current_task is None:
@@ -121,6 +134,9 @@ class Car:
 
     def draw(self, screen):
         self.blitRotate(screen, self.image.copy(), self.pos, (self.w // 2, self.h // 2), self.angle)
+        myFont = pygame.font.SysFont('Helvetica', 10)
+        task_id = myFont.render(str(self.id), 1, (255, 255, 255))
+        screen.blit(task_id, (self.pos[0] - self.tile_len * 0.1, self.pos[1] - self.tile_len * 0.1))
 
     def blitRotate(self, surf, image, pos, originPos, angle):
         # calcaulate the axis aligned bounding box of the rotated image
@@ -146,41 +162,21 @@ class Car:
         surf.blit(rotated_image, origin)
 
     def do_step(self):
-        if len(self.steps_to_goal) == 0 and len(self.buffer) == 0:
-            return
-
         if len(self.steps_to_goal) == 0:
             self.correct_position()
-            next = self.buffer.pop(0)
-
-            if next == 'LEFT':
-                self.go_left_vis()
-            elif next == 'STRAIGHT':
-                self.go_step_straight_vis()
-            elif next == 'RIGHT':
-                self.go_right_vis()
-            elif next == 'TURN_ROUND':
-                self.turn_round()
-                self.do_step()
-                return
+            return
 
         step = self.steps_to_goal.pop(0)
         self.angle += step[1]
         self.move(step[0])
 
     def go_step_straight_vis(self):
-
-        if len(self.steps_to_goal) > 0:
-            self.buffer.append('STRAIGHT')
-            return
-
+        self.steps_to_goal = []
         for i in range(self.speed):
             self.steps_to_goal.append((self.tile_len / self.speed, 0))
 
     def go_left_vis(self):
-        if len(self.steps_to_goal) > 0:
-            self.buffer.append('LEFT')
-            return
+        self.steps_to_goal = []
         self.orientation = (self.orientation - 1) % 4
         self.steps_to_goal.append((self.tile_len / self.speed, 40))
         for i in range(self.speed // 2):
@@ -195,9 +191,8 @@ class Car:
             self.steps_to_goal.append((self.tile_len * 0.52 / remain, 0))
 
     def go_right_vis(self):
-        if len(self.steps_to_goal) > 0:
-            self.buffer.append('RIGHT')
-            return
+        self.steps_to_goal = []
+
         self.orientation = (self.orientation + 1) % 4
         self.steps_to_goal.append((self.tile_len / self.speed, -50))
         for i in range(self.speed // 2):
@@ -209,8 +204,8 @@ class Car:
             self.steps_to_goal.append((self.tile_len * 0.38 / remain, 0))
 
     def correct_position(self):
-        x = int(self.pos[0] // self.tile_len)
-        y = int(self.pos[1] // self.tile_len)
+        x = self.x - 1  # int(self.pos[0] // self.tile_len)
+        y = self.y - 1  # int(self.pos[1] // self.tile_len)
 
         if self.orientation == 0:
             x_plus = 0.8
@@ -226,10 +221,8 @@ class Car:
             y_plus = 0.2
         self.pos = [x * self.tile_len + x_plus * self.tile_len, y * self.tile_len + y_plus * self.tile_len]
 
-    def turn_round(self):
-        print('TURN ROUND')
-        self.angle += 180
-        self.angle %= 360
-        self.orientation += 2
-        self.orientation %= 4
-        self.correct_position()
+    def __str__(self):
+        return f'CID: {self.id}, pos: {self.y} {self.x}, pos_task: {self.possible_task} curr_task: {self.current_task}'
+
+    def __repr__(self):
+        return self.__str__()

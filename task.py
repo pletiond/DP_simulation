@@ -27,6 +27,12 @@ class Task:
     def complete(self):
         self.state = 'COMPLETED'
 
+    def __str__(self):
+        return f'TID: {self.task_id}'
+
+    def __repr__(self):
+        return self.__str__()
+
 
 class Task_Start:
     def __init__(self, task_id, parent):
@@ -94,10 +100,16 @@ class Spawn_Points:
         self.map = map
         self.cars = cars
         self.points = []
+        bitmap = map.to_bitman()
+        for row in range(len(bitmap)):
+            for col in range(len(bitmap[row])):
+                if bitmap[row][col] == 0:
+                    self.add_spawn_point((row, col), 1, '')
+        print(f'Total spawn points: {len(self.points)}')
 
     def add_spawn_point(self, location, spawn_rate, orientation):
         self.points.append((location, spawn_rate, orientation))
-        #self.map.map[location[0]][location[1]] = Task_Point()
+        # self.map.map[location[0]][location[1]] = Task_Point()
 
     def create_task(self):
         start, end = self.get_random_free_points()
@@ -116,10 +128,14 @@ class Spawn_Points:
                 if t.start == point[0] or t.end == point[0]:
                     skip = True
                     break
+            for car in self.cars:
+                car_pos = (car.y, car.x)
+                if car_pos == point[0]:
+                    skip = True
+                    break
             if skip:
                 continue
             free.append(point)
-        print(f'Free task points: {len(free)}')
         if len(free) < 2:
             return False, False
 

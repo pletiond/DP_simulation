@@ -2,7 +2,7 @@ from Visualization import *
 from defined_maps import *
 from Central import *
 
-tile_len = 60
+tile_len = 50
 speed = 50
 ticks = 50
 

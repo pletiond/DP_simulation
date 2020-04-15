@@ -104,15 +104,35 @@ class Visualization:
 
     def run(self):
         steps = 0
+        self.screen.fill((255, 255, 255))
+        self.draw_world()
+        for car in self.cars:
+            car.draw(self.screen)
+        pygame.display.flip()
+        self.clock.tick(self.ticks)
+        auto = False
         while True:
 
             if steps % self.ticks == 0:
-                if steps % self.ticks * 5 == 0:
+                while True:
+                    end = False
+
+                    for event in pygame.event.get():
+                        if event.type == pygame.KEYDOWN:
+                            if event.key == pygame.K_RIGHT:
+                                end = True
+                            if event.key == pygame.K_UP:
+                                auto = True
+                            if event.key == pygame.K_DOWN:
+                                auto = False
+                    if end or auto:
+                        break
+
+                if len(self.spawn_points.tasks) < len(self.cars) + 3:
                     self.spawn_points.create_task()
 
                 self.solver.do_step()
-                # a = input('...')
-                #
+
             for event in pygame.event.get():
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:

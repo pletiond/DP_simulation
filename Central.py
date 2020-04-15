@@ -26,23 +26,38 @@ class Central:
         self.cars = cars
         self.tasks = tasks
         self.bitmap = self.map.to_bitman_objects()
-        self.time_plans = []
+        # self.time_plans = []
         self.current_time = 0
-        for i in range(100):
-            self.time_plans.append(self.bitmap.tolist())
+        # for i in range(100):
+        #    self.time_plans.append(self.bitmap.tolist())
         # self.current_time = 0
+        self.routes = {}
 
-        for car in cars:
-            self.time_plans[0][car.y][car.x] = car.id
+        # for car in cars:
+        #    self.time_plans[0][car.y][car.x] = car.id
 
     def do_step(self):
-        i = input('waiting...')
-        self.check_tasks()
+        print('\nStep')
+        for a in self.cars:
+            for b in self.cars:
+                if a == b:
+                    continue
+                if a.x == b.x and a.y == b.y and a.orientation == b.orientation:
+                    print('LOCATION ERROR')
+                    print(a)
+                    print(b)
+                    input('.......')
 
+        self.check_tasks()
+        # for t in self.tasks:
+        #    print(f'TID {t.task_id} - {t.start} - {t.end} - {t.state}')
+        # print()
+        for c in self.cars:
+            print(c)
         if self.check_change():
             # print('Replan')
             self.replan()
-
+        # print('Move cars')
         self.move_cars()
         self.current_time += 1
 
@@ -61,11 +76,16 @@ class Central:
                     car.current_task = None
                     car.possible_task = None
                     task.complete()
+
                     self.map.map[car.y][car.x] = Task_Point()
+        for t in self.tasks:
+            if t.state == 'COMPLETED':
+                self.tasks.remove(t)
 
     def replan(self):
-        for i in range(self.current_time + 1, len(self.time_plans)):
-            self.time_plans[i] = self.bitmap.tolist()
+        # print('Replan')
+        # for i in range(self.current_time, len(self.time_plans)):
+        #    self.time_plans[i] = self.bitmap.tolist()
 
         self.assign_free_agents()
 
@@ -73,47 +93,50 @@ class Central:
 
         for a in self.cars:
 
-
             if a.possible_task is None:
-                print(f'Car {a.id}      - -')
+                # print(f'Car {a.id}      - -')
                 continue
             # print(f'Car {a.y} - {a.x}   Task {a.possible_task.start} -> {a.possible_task.end}  Current: {a.current_task is not None}')
             if a.current_task is None:
-                print(f'Car {a.id}       {a.possible_task.task_id} -')
+                # print(f'Car {a.id}       {a.possible_task.task_id} -')
                 new_plan = {'id': a.id, 'orientation': a.orientation, 'start': (a.y, a.x), 'end': a.possible_task.start,
                             'task_end': a.possible_task.end}
                 free_agents_plans.append(new_plan)
             elif a.current_task is not None:
-                print(f'Car {a.id}        {a.possible_task.task_id} {a.current_task.task_id}')
+                # print(f'Car {a.id}        {a.possible_task.task_id} {a.current_task.task_id}')
                 new_plan = {'id': a.id, 'orientation': a.orientation, 'start': (a.y, a.x), 'end': None,
                             'task_end': a.possible_task.end}
                 free_agents_plans.append(new_plan)
-        print('------------------------')
+        print('\nCBS')
+        print(free_agents_plans)
         cbs = CBS(self.map.to_bitman_objects(), free_agents_plans)
-        routes = cbs.solve()
+        self.routes = cbs.solve()
 
-        # print(routes)
-
-        for id, route in routes.items():
-            for i in range(len(route)):
-                if self.current_time + i >= len(self.time_plans):
-                    self.time_plans.append(self.bitmap.tolist())
-                step = route[i]
-                self.time_plans[self.current_time + i][step[0]][step[1]] = id
+        for agent, path in self.routes.items():
+            print(f'{agent}: {path}')
+        # input('waiting')
+        # for id, route in routes.items():
+        # for i in range(len(route)):
+        # if self.current_time + i >= len(self.time_plans):
+        #    self.time_plans.append(self.bitmap.tolist())
+        # step = route[i]
+        # self.time_plans[self.current_time + i][step[0]][step[1]] = id
         for a in self.cars:
-            if a.id in routes.keys():
+            if a.id in self.routes.keys():
                 continue
-            self.time_plans[self.current_time + 1][a.y][a.x] = a.id
+            print('AGENT IS NOT IN ROUTES PLANNING------------------------')
+            # self.time_plans[self.current_time + 1][a.y][a.x] = a.id
 
     def assign_free_agents(self):
         free_agents = self.get_free_agents()
         free_tasks = self.get_free_tasks()
-        print(f'Free tasks: {len(free_tasks)}')
-        print(f'Free agents: {len(free_agents)}')
+        # print(f'Free tasks: {len(free_tasks)}')
+        # print(f'Free agents: {len(free_agents)}')
 
         metrics = {}
 
         for t in free_tasks:
+            # print(t.start)
             metrics[t] = []
             for a in free_agents:
                 route_len = CBS.heuristic((a.y, a.x), t.start)
@@ -121,9 +144,18 @@ class Central:
 
             metrics[t].sort(key=lambda tup: tup[1])
 
+        # for a in free_agents:
+        #    print(f'{a.id} - ({a.y},{a.x})')
         assignned = {}
 
         while True:
+
+            # for key, value in metrics.items():
+            #    print(f'{key} - {value}')
+            # print('')
+            # for key, value in assignned.items():
+            #    print(f'{key} - {value}')
+
             if len(assignned.keys()) == len(free_agents) or len(metrics) == 0:
                 break
             for a in free_agents:
@@ -142,9 +174,11 @@ class Central:
                     continue
                 del metrics[best_task]
                 assignned[a] = best_task
-                for t, arr in metrics.items():
-                    if len(arr) > 0 and arr[0][0].id == a.id:
-                        metrics[t].pop(0)
+                for task in metrics.keys():
+                    for i in range(len(metrics[task])):
+                        if metrics[task][i][0].id == a.id:
+                            metrics[task].pop(i)
+                            break
 
         for key, value in assignned.items():
             for a in range(len(free_agents)):
@@ -191,32 +225,41 @@ class Central:
 
     def move_cars(self):
         # print('\nMove cars')
-        next_state = self.time_plans[self.current_time + 1]
-        curr_state = self.time_plans[self.current_time]
+        # next_state = self.time_plans[self.current_time + 1]
+        # curr_state = self.time_plans[self.current_time]
 
         for i in range(len(self.cars)):
+            route = self.routes[self.cars[i].id]
+            curr_pos = route[0]
+            next_pos = route[1]
+            diff = tuple(x - y for x, y in zip(next_pos, curr_pos))
+
             car = self.cars[i]
             res = None
             # if next_state[car.y][car.x] == curr_state[car.y][car.x]:
             #    # print(f'Car {car.id} WAIT')
             #    self.time_plans[self.current_time + 1][car.y][car.x] = car.id
 
-            if next_state[car.y][car.x + 1] == curr_state[car.y][car.x]:
+            if diff == (0, 1):
                 res = car.go_right()
                 # print(f'Car {car.id} RIGHT')
-            elif next_state[car.y][car.x - 1] == curr_state[car.y][car.x]:
+            elif diff == (0, -1):
                 res = car.go_left()
-                # print(f'Car {car.id} LEFTG')
-            elif next_state[car.y + 1][car.x] == curr_state[car.y][car.x]:
+                # print(f'Car {car.id} LEFT')
+            elif diff == (1, 0):
                 res = car.go_down()
                 # print(f'Car {car.id} DOWN')
-            elif next_state[car.y - 1][car.x] == curr_state[car.y][car.x]:
+            elif diff == (-1, 0):
                 res = car.go_up()
                 # print(f'Car {car.id} UP')
-            else:
+            elif diff == (0, 0):
                 # print(f'Car {car.id} ERROR---------!!!!')
-                self.time_plans[self.current_time + 1][car.y][car.x] = car.id
-                # exit()
+                # self.time_plans[self.current_time + 1][car.y][car.x] = car.id
+                car.wait()
+            else:
+                print('DIFF error')
+                exit(1)
+
             if res == False:
                 print('ERROR CANT MOVE!!!---')
 
@@ -243,15 +286,19 @@ class CBS:
         self.OPEN.append(root)
 
         while len(self.OPEN) > 0:
+            print(len(self.OPEN))
             self.curr_node = self.get_best_node()  # lowest solution cost
             conflicts, edge_conflicts = self.validate_solution()
 
             if len(conflicts) == 0 and len(edge_conflicts) == 0:
+                for a, sol in self.curr_node.solution.items():
+                    if sol is None:
+                        input('empty sol!!!!')
                 return self.curr_node.solution  # goal
             # Node conflict
             if len(conflicts) > 0:
                 first_conflict = conflicts[0]
-                # print(first_conflict)
+                print(first_conflict)
 
                 # print('\n')
                 for a in first_conflict['agents']:
@@ -261,6 +308,7 @@ class CBS:
                     new_node.edge_constraints = self.curr_node.edge_constraints.copy()
                     new_node.add_constraint(a, first_conflict['position'], first_conflict['time'])
                     new_node.solution = self.curr_node.solution.copy()
+                    new_node.orientations = self.curr_node.orientations.copy()
                     # Update solutions
                     self.update_solution(new_node, a)
                     new_node.compute_cost()
@@ -273,7 +321,7 @@ class CBS:
             # Edge conflict
             else:
                 first_conflict = edge_conflicts[0]
-                # print(first_conflict)
+                print(first_conflict)
 
                 # print('\n')
                 for a in first_conflict['agents']:
@@ -284,6 +332,7 @@ class CBS:
                     new_node.add_edge_constraint(a, first_conflict['from'], first_conflict['to'],
                                                  first_conflict['time'])
                     new_node.solution = self.curr_node.solution.copy()
+                    new_node.orientations = self.curr_node.orientations.copy()
                     # Update solutions
                     self.update_solution(new_node, a)
                     new_node.compute_cost()
@@ -291,11 +340,6 @@ class CBS:
                     # print(new_node)
                     if not new_node.cost is None:
                         self.OPEN.append(new_node)
-                        # print('ADDED')
-                    # print('-------')
-
-            # tmp = input('Ready?')
-            # print('----------------------------------------------------------------------')
 
     def get_init_solutions(self):
         # Map.print_map(None,self.map)
@@ -308,29 +352,24 @@ class CBS:
             end = agent['end']
             task_end = agent['task_end']
             if end is None:
-                route_to_end, orientation = self.astar(self.curr_node, id, orientation, start, task_end)
-                if not route_to_end:
-                    # print('skip')
-                    continue
+                route_to_end, all_orientations = self.astar(self.curr_node, id, orientation, start, task_end)
                 self.curr_node.solution[id] = route_to_end
+                self.curr_node.orientations[id] = all_orientations
                 continue
 
             # print(f'{start} -> {end} -> {task_end}')
 
-            route_to_task, orientation = self.astar(self.curr_node, id, orientation, start, end)
-            # print(route_to_task)
+            route_to_task, all_orientations1 = self.astar(self.curr_node, id, orientation, start, end)
 
-            if not route_to_task:
-                # print('skip')
-                continue
-            route_to_end, orientation = self.astar(self.curr_node, id, orientation, end, task_end)
-            if not route_to_end:
-                # print('skip')
-                continue
+            orientation = all_orientations1[-1]
+            route_to_end, all_orientations2 = self.astar(self.curr_node, id, orientation, end, task_end)
+
             # print(route_to_end)
             merged_routes = route_to_task[0:-1] + route_to_end
+            merged_orientations = all_orientations1[0:-1] + all_orientations2
 
             self.curr_node.solution[id] = merged_routes
+            self.curr_node.orientations[id] = merged_orientations
 
     def update_solution(self, node, agent_id):
         # print('Update----')
@@ -347,22 +386,28 @@ class CBS:
         task_end = agent['task_end']
 
         if end is None:
-            route_to_end, orientation = self.astar(node, id, orientation, start, task_end)
+            route_to_end, all_orientations = self.astar(node, id, orientation, start, task_end)
             if not route_to_end:
                 node.solution[id] = None
                 return
             node.solution[id] = route_to_end
+            node.orientations[id] = all_orientations
             return
 
-        route_to_task, orientation = self.astar(node, id, orientation, start, end)
-        route_to_end, orientation = self.astar(node, id, orientation, end, task_end, offset=len(route_to_task) - 1)
-        if not route_to_task or not route_to_end:
+        route_to_task, all_orientations1 = self.astar(node, id, orientation, start, end)
+        if not route_to_task:
+            node.solution[id] = None
+            return
+        route_to_end, all_orientations2 = self.astar(node, id, all_orientations1[-1], end, task_end,
+                                                     offset=len(route_to_task) - 1)
+        if not route_to_end:
             node.solution[id] = None
             return
         merged_routes = route_to_task[0:-1] + route_to_end
+        merged_orientations = all_orientations1[0:-1] + all_orientations2
         # print(merged_routes)
         node.solution[id] = merged_routes
-        # tmp = input('Ready?')
+        node.orientations[id] = merged_orientations
 
     def get_best_node(self):
         best_node = None
@@ -386,7 +431,7 @@ class CBS:
             if max_len < len(sol):
                 max_len = len(sol)
         # print(max_len)
-
+        all_orientations = self.curr_node.orientations
         for i in range(max_len):
             occupied = {}
             for agent, sol in self.curr_node.solution.items():
@@ -405,12 +450,20 @@ class CBS:
                         # print('EDGE CONFLICT!!!!!')
                         edge_conflict = {'agents': [agent, agent2], 'from': sol[i], 'to': sol[i + 1], 'time': i}
                         edge_conflicts.append(edge_conflict)
+                        # return conflicts, edge_conflicts
 
             for key, value in occupied.items():
                 if len(value) < 2:
                     continue
-                conflict = {'agents': value, 'position': key, 'time': i}
-                # conflicts.append(conflict)
+                for a1 in value:
+                    for a2 in value:
+                        if a1 == a2 or all_orientations[a1][i] == ((all_orientations[a2][i] + 2) % 4):
+                            continue
+                        if len(value) == 2 and not self.is_on_crossroads(key):
+                            continue
+                        conflict = {'agents': [a1, a2], 'position': key, 'time': i}
+                        conflicts.append(conflict)
+                        return conflicts, edge_conflicts
 
         # print(conflicts)
         return conflicts, edge_conflicts
@@ -420,22 +473,14 @@ class CBS:
         return np.sqrt((b[0] - a[0]) ** 2 + (b[1] - a[1]) ** 2)
 
     def check_constrain(self, node, agent_id, time, position, from_):
-
         for c in node.constraints:
             if c[0] == agent_id and c[1] == position and c[2] == time:
                 # print('--------------------- SKIP')
                 return False
-        if len(node.edge_constraints) == 0:
-            return True
-
-        # print(node.edge_constraints)
-        # print(f'Agent: {agent_id} Time: {time} From: {from_} To: {position}' )
 
         for e in node.edge_constraints:
             if e[0] == agent_id and e[3] == time - 1 and (
                     (e[1] == position and e[2] == from_) or (e[2] == position and e[1] == from_)):
-                # print('FALSE')
-                # tmp = input('Ready?')
                 return False
 
         # print('TRUE')
@@ -478,20 +523,27 @@ class CBS:
             # Found the goal
             if current_node == end_node:
                 path = []
+                all_orientations = []
                 current = current_node
                 while current is not None:
                     path.append(current.position)
+                    all_orientations.append(current.orientation)
                     current = current.parent
-                return path[::-1], current_node.orientation  # Return reversed path
+                if not all_orientations[::-1][0] == start_node.orientation:
+                    print(all_orientations[::-1])
+                    print(path[::-1])
+                    input('---')
+                return path[::-1], all_orientations[::-1]  # Return reversed path
 
             # Generate children
             children = []
             directions = [(0, -1), (-1, 0), (0, 1), (1, 0)]
             for new_position in directions + [(0, 0)]:
+                node_position = (current_node.position[0] + new_position[0], current_node.position[1] + new_position[1])
                 if new_position == directions[(current_node.orientation + 2) % 4]:
                     continue
-                # Get node position
-                node_position = (current_node.position[0] + new_position[0], current_node.position[1] + new_position[1])
+                if new_position == (0, 0) and self.is_on_crossroads(node_position):
+                    continue
 
                 # Make sure within range
                 if node_position[0] > (len(self.map) - 1) or node_position[0] < 0 or node_position[1] > (
@@ -554,13 +606,28 @@ class CBS:
                 # Add the child to the open list
                 open_list.append(child)
 
-        return False
+        return False, False
 
+    def is_on_crossroads(self, node_position):
+        count = 0
+        if node_position[0] > 0 and self.map[node_position[0] - 1][node_position[1]] == 0:
+            count += 1
+        if node_position[1] > 0 and self.map[node_position[0]][node_position[1] - 1] == 0:
+            count += 1
+        if node_position[0] < len(self.map) and self.map[node_position[0] + 1][node_position[1]] == 0:
+            count += 1
+        if node_position[1] < len(self.map[0]) and self.map[node_position[0]][node_position[1] + 1] == 0:
+            count += 1
+        if count > 2:
+            return True
+        else:
+            return False
 
 class Node:
 
     def __init__(self):
         self.solution = {}
+        self.orientations = {}
         self.constraints = []
         self.edge_constraints = []
         self.cost = None
