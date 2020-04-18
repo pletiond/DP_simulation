@@ -17,10 +17,10 @@ class Car:
         self.id = self.map.car_id_max
         self.map.car_id_max += 1
 
-        size = (tile_len * 0.7, tile_len * 0.3)
+        size = (tile_len * 0.6, tile_len * 0.3)
         self.tile_len = tile_len
         self.image = pygame.Surface(size)
-        pygame.draw.rect(self.image, (0, 0, 255), (0, 0, tile_len * 0.7, tile_len * 0.3))
+        pygame.draw.rect(self.image, (0, 0, 255), (0, 0, tile_len * 0.6, tile_len * 0.3))
         pygame.draw.line(self.image, (255, 255, 0), (size[0] * 0.9, 0), (size[0] * 0.9, size[1]), 5)
         self.image.set_colorkey(0)
         self.speed = speed
@@ -57,7 +57,6 @@ class Car:
             print(self.id)
             exit(0)
 
-
     def go_down(self):
         self.correct_position()
         self.y += 1
@@ -73,7 +72,6 @@ class Car:
         else:
             self.go_step_straight_vis()
 
-
     def go_right(self):
         self.correct_position()
         self.x += 1
@@ -88,7 +86,6 @@ class Car:
             self.go_step_straight_vis()
         else:
             self.go_left_vis()
-
 
     def go_left(self):
         self.correct_position()
@@ -226,3 +223,23 @@ class Car:
 
     def __repr__(self):
         return self.__str__()
+
+
+class Car_Point:
+
+    def __init__(self, map, location, tile_len, max_cars, speed):
+        self.map = map
+        self.location = location
+        self.max_cars = max_cars
+        self.tile_len = tile_len
+        self.speed = speed
+
+        self.color = (0, 0, 0)  # black
+
+    def draw(self, screen):
+        pygame.draw.rect(screen,
+                         self.color,
+                         [(self.location[1] - 1) * self.tile_len,
+                          (self.location[0] - 1) * self.tile_len,
+                          self.tile_len,
+                          self.tile_len])

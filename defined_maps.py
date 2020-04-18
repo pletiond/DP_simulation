@@ -177,8 +177,8 @@ def get_large_map1(tile_len, speed):
         Car((4, 1), map, tile_len, 'DOWN', speed),
 
         Car((1, 12), map, tile_len, 'LEFT', speed),
-        # Car((1, 10), map, tile_len, 'LEFT', speed),
-        Car((2, 13), map, tile_len, 'DOWN', speed),
+        Car((1, 10), map, tile_len, 'LEFT', speed),
+        # Car((2, 13), map, tile_len, 'DOWN', speed),
         # Car((4, 13), map, tile_len, 'DOWN', speed),
 
         Car((9, 1), map, tile_len, 'UP', speed),
@@ -186,19 +186,22 @@ def get_large_map1(tile_len, speed):
         Car((10, 2), map, tile_len, 'RIGHT', speed),
         # Car((13, 4), map, tile_len, 'RIGHT', speed),
 
-        Car((9, 13), map, tile_len, 'UP', speed),
-        Car((7, 13), map, tile_len, 'UP', speed),
-        Car((10, 12), map, tile_len, 'LEFT', speed),
+        # Car((9, 13), map, tile_len, 'UP', speed),
+        # Car((7, 13), map, tile_len, 'UP', speed),
+        # Car((10, 12), map, tile_len, 'LEFT', speed),
         # Car((13, 10), map, tile_len, 'LEFT', speed)
 
     ]
+    # cars = []
     tasks = []
-    spawn_points = Spawn_Points(tasks, map, cars)
+    spawn_points = Spawn_Points(tasks, map, [])
+    cars_points = [Car_Point(map, (2, 3), tile_len, 20, speed)]
+
     # for i in range(2, height - 2, 3):
     #    print((2, i))
     #    spawn_points.add_spawn_point((i + 2, 3), 1, 'DOWN')
     #    spawn_points.add_spawn_point((i + 2, 11), 1, 'DOWN')
-    for i in range(len(cars)):
+    for i in range(len(cars) // 2):
         spawn_points.create_task()
 
-    return map, tasks, cars, spawn_points
+    return map, tasks, cars, spawn_points, cars_points

@@ -15,9 +15,10 @@ decode_dict = {
 }
 orientations = ['LEFT', 'UP', 'RIGHT', 'DOWN']
 
+
 class Visualization:
 
-    def __init__(self, in_map, tile_len, cars, ticks, spawn_points, solver):
+    def __init__(self, in_map, tile_len, cars, ticks, spawn_points, cars_points, solver):
         self.map = []
 
         for i in range(len(in_map)):
@@ -29,12 +30,15 @@ class Visualization:
             if len(tmp) == 0:
                 continue
             self.map.append(tmp)
-
+        for cp in cars_points:
+            loc = cp.location
+            self.map[loc[0] - 1][loc[1] - 1] = 0
         for i in self.map:
             print(i)
 
         self.solver = solver
         self.spawn_points = spawn_points
+        self.cars_points = cars_points
         self.cars = cars
         self.tile_len = tile_len
         self.vis_map = []
@@ -66,7 +70,6 @@ class Visualization:
         #    pos = s[0]
         #    new_pos = (pos[0] -1, pos[1] -1)
         #    self.vis_map[pos[0]-1][pos[1]-1] = Task_Down((new_pos[0] * self.tile_len, new_pos[1] * self.tile_len), self.tile_len)
-
 
     def encode_tile(self, row, column):
         code = ''
@@ -106,6 +109,8 @@ class Visualization:
         steps = 0
         self.screen.fill((255, 255, 255))
         self.draw_world()
+        for cp in self.cars_points:
+            cp.draw(self.screen)
         for car in self.cars:
             car.draw(self.screen)
         pygame.display.flip()
@@ -128,7 +133,7 @@ class Visualization:
                     if end or auto:
                         break
 
-                if len(self.spawn_points.tasks) < len(self.cars) + 3:
+                if len(self.spawn_points.tasks) < len(self.cars):
                     self.spawn_points.create_task()
 
                 self.solver.do_step()
@@ -142,6 +147,9 @@ class Visualization:
 
             self.screen.fill((255, 255, 255))
             self.draw_world()
+            for cp in self.cars_points:
+                cp.draw(self.screen)
+
             for car in self.cars:
                 car.draw(self.screen)
 

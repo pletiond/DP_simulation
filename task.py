@@ -28,7 +28,7 @@ class Task:
         self.state = 'COMPLETED'
 
     def __str__(self):
-        return f'TID: {self.task_id}'
+        return f'TID: {self.task_id} From: {self.start} To: {self.end}'
 
     def __repr__(self):
         return self.__str__()

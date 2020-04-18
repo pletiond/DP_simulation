@@ -1,6 +1,4 @@
-import numpy as np
-from map import Map
-from task import *
+from Car import *
 
 
 class ANode():
@@ -21,17 +19,21 @@ class ANode():
 
 class Central:
 
-    def __init__(self, cars, map, tasks):
+    def __init__(self, cars, map, tasks, car_points):
         self.map = map
         self.cars = cars
         self.tasks = tasks
         self.bitmap = self.map.to_bitman_objects()
+        self.car_points = car_points
         # self.time_plans = []
         self.current_time = 0
         # for i in range(100):
         #    self.time_plans.append(self.bitmap.tolist())
         # self.current_time = 0
         self.routes = {}
+        for cp in car_points:
+            l = cp.location
+            self.bitmap[l[0]][l[1]] = 0
 
         # for car in cars:
         #    self.time_plans[0][car.y][car.x] = car.id
@@ -54,10 +56,13 @@ class Central:
         # print()
         for c in self.cars:
             print(c)
+        self.park_cars()
+        self.unpark_cars()
         if self.check_change():
             # print('Replan')
             self.replan()
         # print('Move cars')
+        self.park_cars()
         self.move_cars()
         self.current_time += 1
 
@@ -94,7 +99,10 @@ class Central:
         for a in self.cars:
 
             if a.possible_task is None:
-                # print(f'Car {a.id}      - -')
+                next = self.get_parking_location(a)
+                new_plan = {'id': a.id, 'orientation': a.orientation, 'start': (a.y, a.x), 'end': None,
+                            'task_end': next}
+                free_agents_plans.append(new_plan)
                 continue
             # print(f'Car {a.y} - {a.x}   Task {a.possible_task.start} -> {a.possible_task.end}  Current: {a.current_task is not None}')
             if a.current_task is None:
@@ -109,7 +117,7 @@ class Central:
                 free_agents_plans.append(new_plan)
         print('\nCBS')
         print(free_agents_plans)
-        cbs = CBS(self.map.to_bitman_objects(), free_agents_plans)
+        cbs = CBS(self.bitmap, free_agents_plans)
         self.routes = cbs.solve()
 
         for agent, path in self.routes.items():
@@ -126,6 +134,16 @@ class Central:
                 continue
             print('AGENT IS NOT IN ROUTES PLANNING------------------------')
             # self.time_plans[self.current_time + 1][a.y][a.x] = a.id
+
+    def get_parking_location(self, agent):
+        best_loc = None
+        min_len = None
+        loc = (agent.y, agent.x)
+        for cp in self.car_points:
+            if best_loc is None or CBS.heuristic(loc, cp.location) < min_len:
+                min_len = CBS.heuristic(loc, cp.location)
+                best_loc = cp.location
+        return best_loc
 
     def assign_free_agents(self):
         free_agents = self.get_free_agents()
@@ -230,6 +248,9 @@ class Central:
 
         for i in range(len(self.cars)):
             route = self.routes[self.cars[i].id]
+            if len(route) == 1:
+                self.cars[i].wait()
+                continue
             curr_pos = route[0]
             next_pos = route[1]
             diff = tuple(x - y for x, y in zip(next_pos, curr_pos))
@@ -263,6 +284,40 @@ class Central:
             if res == False:
                 print('ERROR CANT MOVE!!!---')
 
+    def park_cars(self):
+        for car in self.cars:
+            if car.possible_task is not None:
+                continue
+            l = (car.y, car.x)
+            for cp in self.car_points:
+                if cp.location == l:
+                    self.cars.remove(car)
+
+    def unpark_cars(self):
+        for cp in self.car_points:
+            if len(self.cars) >= cp.max_cars:
+                continue
+            empty = True
+            for car in self.cars:
+                l = (car.y, car.x)
+                if cp.location == l:
+                    empty = False
+                    break
+            if not empty:
+                continue
+            loc = cp.location
+            if self.bitmap[loc[0] - 1][loc[1]] == 0:
+                orientation = 'UP'
+            elif self.bitmap[loc[0] + 1][loc[1]] == 0:
+                orientation = 'DOWN'
+            elif self.bitmap[loc[0]][loc[1] - 1] == 0:
+                orientation = 'LEFT'
+            elif self.bitmap[loc[0]][loc[1] + 1] == 0:
+                orientation = 'RIGHT'
+            else:
+                continue
+            self.cars.append(Car(loc, self.map, cp.tile_len, orientation, cp.speed))
+
 
 class CBS:
 
@@ -286,7 +341,6 @@ class CBS:
         self.OPEN.append(root)
 
         while len(self.OPEN) > 0:
-            print(len(self.OPEN))
             self.curr_node = self.get_best_node()  # lowest solution cost
             conflicts, edge_conflicts = self.validate_solution()
 
@@ -298,7 +352,6 @@ class CBS:
             # Node conflict
             if len(conflicts) > 0:
                 first_conflict = conflicts[0]
-                print(first_conflict)
 
                 # print('\n')
                 for a in first_conflict['agents']:
@@ -321,7 +374,6 @@ class CBS:
             # Edge conflict
             else:
                 first_conflict = edge_conflicts[0]
-                print(first_conflict)
 
                 # print('\n')
                 for a in first_conflict['agents']:
@@ -458,10 +510,20 @@ class CBS:
                 for a1 in value:
                     for a2 in value:
                         if a1 == a2 or all_orientations[a1][i] == ((all_orientations[a2][i] + 2) % 4):
-                            continue
-                        if len(value) == 2 and not self.is_on_crossroads(key):
-                            continue
+                            if not i + 2 > len(all_orientations[a1]) and not i + 2 > len(all_orientations[a2]):
+
+                                o1 = all_orientations[a1][i + 1] - all_orientations[a1][i]
+                                o2 = all_orientations[a2][i + 1] - all_orientations[a2][i]
+                                if (o1 == 0 and o2 == -1) or (o2 == 0 and o1 == -1):
+                                    ...
+                                else:
+                                    continue
                         conflict = {'agents': [a1, a2], 'position': key, 'time': i}
+                        if len(value) == 2 and not self.is_on_crossroads(key) and not all_orientations[a1][i] == \
+                                                                                      all_orientations[a2][i]:
+                            print(f'ALLOWED CONFLICT: {conflict}')
+                            continue
+
                         conflicts.append(conflict)
                         return conflicts, edge_conflicts
 
@@ -622,6 +684,7 @@ class CBS:
             return True
         else:
             return False
+
 
 class Node:
 
