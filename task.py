@@ -1,5 +1,5 @@
 import random
-
+import csv
 
 class Task:
 
@@ -111,11 +111,12 @@ class Spawn_Points:
         self.points.append((location, spawn_rate, orientation))
         # self.map.map[location[0]][location[1]] = Task_Point()
 
-    def create_task(self):
+    def create_task(self, time):
         start, end = self.get_random_free_points()
         if start == False:
             return
-
+        with open('tests/tasks01_a20_central.csv', 'a') as fp:
+            fp.write(f'{start};{end};{int(time)}\n')
         new_task = Task(start, end, self.map)
         new_task.activate()
         self.tasks.append(new_task)

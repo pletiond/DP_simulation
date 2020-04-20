@@ -16,6 +16,12 @@ class ANode():
     def __eq__(self, other):
         return self.position == other.position
 
+    def __str__(self):
+        return f'Pos: {self.position}, Ori: {self.orientation},  G H F: {self.g} {self.h} {self.f}'
+
+    def __repr__(self):
+        return self.__str__()
+
 
 class Central:
 
@@ -35,8 +41,7 @@ class Central:
             l = cp.location
             self.bitmap[l[0]][l[1]] = 0
 
-        # for car in cars:
-        #    self.time_plans[0][car.y][car.x] = car.id
+        self.do_replan = True
 
     def do_step(self):
         print('\nStep')
@@ -58,8 +63,8 @@ class Central:
             print(c)
         self.park_cars()
         self.unpark_cars()
-        if self.check_change():
-            # print('Replan')
+        if self.do_replan:
+            print('Replan')
             self.replan()
         # print('Move cars')
         self.park_cars()
@@ -77,10 +82,12 @@ class Central:
                     car.possible_task = task
                     task.assign(car)
                     self.map.map[car.y][car.x] = Task_Point()
+                    self.do_replan = True
                 elif car_pos == task.end and car.current_task is not None and car.current_task.task_id == task.task_id:
                     car.current_task = None
                     car.possible_task = None
                     task.complete()
+                    self.do_replan = True
 
                     self.map.map[car.y][car.x] = Task_Point()
         for t in self.tasks:
@@ -88,10 +95,6 @@ class Central:
                 self.tasks.remove(t)
 
     def replan(self):
-        # print('Replan')
-        # for i in range(self.current_time, len(self.time_plans)):
-        #    self.time_plans[i] = self.bitmap.tolist()
-
         self.assign_free_agents()
 
         free_agents_plans = []
@@ -113,10 +116,10 @@ class Central:
             elif a.current_task is not None:
                 # print(f'Car {a.id}        {a.possible_task.task_id} {a.current_task.task_id}')
                 new_plan = {'id': a.id, 'orientation': a.orientation, 'start': (a.y, a.x), 'end': None,
-                            'task_end': a.possible_task.end}
+                            'task_end': a.current_task.end}
                 free_agents_plans.append(new_plan)
-        print('\nCBS')
-        print(free_agents_plans)
+
+        # print(free_agents_plans)
         cbs = CBS(self.bitmap, free_agents_plans)
         self.routes = cbs.solve()
 
@@ -134,6 +137,7 @@ class Central:
                 continue
             print('AGENT IS NOT IN ROUTES PLANNING------------------------')
             # self.time_plans[self.current_time + 1][a.y][a.x] = a.id
+        self.do_replan = False
 
     def get_parking_location(self, agent):
         best_loc = None
@@ -162,17 +166,9 @@ class Central:
 
             metrics[t].sort(key=lambda tup: tup[1])
 
-        # for a in free_agents:
-        #    print(f'{a.id} - ({a.y},{a.x})')
         assignned = {}
 
         while True:
-
-            # for key, value in metrics.items():
-            #    print(f'{key} - {value}')
-            # print('')
-            # for key, value in assignned.items():
-            #    print(f'{key} - {value}')
 
             if len(assignned.keys()) == len(free_agents) or len(metrics) == 0:
                 break
@@ -204,11 +200,14 @@ class Central:
                     if free_agents[a] == key and value == free_tasks[t]:
                         # print(f'Car {key.id} - Task {value.task_id}')
                         key.possible_task = value
+                        if (key.y, key.x) == value.start:
+                            key.current_task = value
 
     def get_free_agents(self):
         free_agents = []
         for a in range(len(self.cars)):
-            if self.cars[a].current_task is None and self.cars[a].possible_task is None:
+            if self.cars[a].current_task is None:
+                self.cars[a].possible_task = None
                 free_agents.append(self.cars[a])
 
         return free_agents
@@ -216,30 +215,10 @@ class Central:
     def get_free_tasks(self):
         free_tasks = []
         for t in range(len(self.tasks)):
-            free = True
-            for a in range(len(self.cars)):
-                if self.cars[a].possible_task is None:
-                    continue
-                if self.cars[a].possible_task.task_id == self.tasks[t].task_id:
-                    free = False
-                    break
-
-            if free:
+            if self.tasks[t].car is None:
                 free_tasks.append(self.tasks[t])
 
         return free_tasks
-
-    def check_change(self):
-        return True
-        assingged_agents = 0
-        for a in self.cars:
-            if a.possible_task is not None:
-                assingged_agents += 1
-        if assingged_agents == len(self.cars):
-            return False
-        elif assingged_agents == len(self.tasks):
-            return False
-        return True
 
     def move_cars(self):
         # print('\nMove cars')
@@ -250,6 +229,7 @@ class Central:
             route = self.routes[self.cars[i].id]
             if len(route) == 1:
                 self.cars[i].wait()
+                route.pop(0)
                 continue
             curr_pos = route[0]
             next_pos = route[1]
@@ -283,6 +263,7 @@ class Central:
 
             if res == False:
                 print('ERROR CANT MOVE!!!---')
+            route.pop(0)
 
     def park_cars(self):
         for car in self.cars:
@@ -317,6 +298,7 @@ class Central:
             else:
                 continue
             self.cars.append(Car(loc, self.map, cp.tile_len, orientation, cp.speed))
+            self.do_replan = True
 
 
 class CBS:
@@ -341,7 +323,9 @@ class CBS:
         self.OPEN.append(root)
 
         while len(self.OPEN) > 0:
+            #print(f'Len OPEN: {len(self.OPEN)}')
             self.curr_node = self.get_best_node()  # lowest solution cost
+            #print(f'Cost: {self.curr_node.cost}')
             conflicts, edge_conflicts = self.validate_solution()
 
             if len(conflicts) == 0 and len(edge_conflicts) == 0:
@@ -352,6 +336,7 @@ class CBS:
             # Node conflict
             if len(conflicts) > 0:
                 first_conflict = conflicts[0]
+                print(first_conflict)
 
                 # print('\n')
                 for a in first_conflict['agents']:
@@ -374,6 +359,7 @@ class CBS:
             # Edge conflict
             else:
                 first_conflict = edge_conflicts[0]
+                #print(first_conflict)
 
                 # print('\n')
                 for a in first_conflict['agents']:
@@ -502,14 +488,16 @@ class CBS:
                         # print('EDGE CONFLICT!!!!!')
                         edge_conflict = {'agents': [agent, agent2], 'from': sol[i], 'to': sol[i + 1], 'time': i}
                         edge_conflicts.append(edge_conflict)
-                        # return conflicts, edge_conflicts
+                        #return conflicts, edge_conflicts
 
             for key, value in occupied.items():
                 if len(value) < 2:
                     continue
                 for a1 in value:
                     for a2 in value:
-                        if a1 == a2 or all_orientations[a1][i] == ((all_orientations[a2][i] + 2) % 4):
+                        if a1 == a2:
+                            continue
+                        if all_orientations[a1][i] == ((all_orientations[a2][i] + 2) % 4):
                             if not i + 2 > len(all_orientations[a1]) and not i + 2 > len(all_orientations[a2]):
 
                                 o1 = all_orientations[a1][i + 1] - all_orientations[a1][i]
@@ -521,7 +509,7 @@ class CBS:
                         conflict = {'agents': [a1, a2], 'position': key, 'time': i}
                         if len(value) == 2 and not self.is_on_crossroads(key) and not all_orientations[a1][i] == \
                                                                                       all_orientations[a2][i]:
-                            print(f'ALLOWED CONFLICT: {conflict}')
+                            # print(f'ALLOWED CONFLICT: {conflict}')
                             continue
 
                         conflicts.append(conflict)
@@ -553,7 +541,7 @@ class CBS:
         """Returns a list of tuples as a path from the given start to the given end in the given maze"""
 
         # Create start and end node
-        # print('a star')
+        print('a star')
         start_node = ANode(None, start)
         start_node.g = start_node.h = start_node.f = 0
         start_node.orientation = orientation
@@ -569,7 +557,7 @@ class CBS:
 
         # Loop until you find the end
         while len(open_list) > 0:
-
+            # print(f'{agent_id} - A star len: {len(open_list)}')
             # Get the current node
             current_node = open_list[0]
             current_index = 0
@@ -591,10 +579,6 @@ class CBS:
                     path.append(current.position)
                     all_orientations.append(current.orientation)
                     current = current.parent
-                if not all_orientations[::-1][0] == start_node.orientation:
-                    print(all_orientations[::-1])
-                    print(path[::-1])
-                    input('---')
                 return path[::-1], all_orientations[::-1]  # Return reversed path
 
             # Generate children
@@ -666,6 +650,7 @@ class CBS:
                     continue
 
                 # Add the child to the open list
+                print(f'Agent: {agent_id} - {child}')
                 open_list.append(child)
 
         return False, False
@@ -710,12 +695,10 @@ class Node:
             if sol is None:
                 self.cost = None
                 return
-            if cost < len(sol):
-                cost = len(sol)
+            # if cost < len(sol):
+            #    cost = len(sol)
+            cost += len(sol)
         self.cost = cost
-
-    def find_solutions(self):
-        ...
 
     def __str__(self):
         return f'Solutions: {self.solution}\nConstraints: {self.constraints}\nEdge_constraints: {self.edge_constraints}\nCost: {self.cost}\n'

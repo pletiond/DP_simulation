@@ -15,7 +15,7 @@ animation = Animation(map, window_scale=WINDOW_SCALE, objects=cars, tasks=tasks)
 
 # single_car_controller = SingleCarController(cars[0], map, tasks)
 
-TP = TokenPassing(cars, map, tasks)
+TP = TP(cars, map, tasks)
 
 while True:
     #print(f'Tasks: {len(tasks)}')

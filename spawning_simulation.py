@@ -19,7 +19,7 @@ animation = Animation(map, window_scale=WINDOW_SCALE, objects=cars, tasks=tasks)
 
 # single_car_controller = SingleCarController(cars[0], map, tasks)
 
-TP = TokenPassing(cars, map, tasks)
+TP = TP(cars, map, tasks)
 central = Central(cars, map, tasks)
 
 step = 1
