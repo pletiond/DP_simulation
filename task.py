@@ -95,15 +95,16 @@ class Task_Point:
 
 class Spawn_Points:
 
-    def __init__(self, tasks, map, cars):
+    def __init__(self, tasks, map, cars, max_cars):
         self.tasks = tasks
         self.map = map
         self.cars = cars
         self.points = []
+        self.max_cars = max_cars
         bitmap = map.to_bitman()
         for row in range(len(bitmap)):
             for col in range(len(bitmap[row])):
-                if bitmap[row][col] == 0:
+                if bitmap[row][col] == 0 and not self.is_on_crossroads(bitmap, (row, col)):
                     self.add_spawn_point((row, col), 1, '')
         print(f'Total spawn points: {len(self.points)}')
 
@@ -115,7 +116,7 @@ class Spawn_Points:
         start, end = self.get_random_free_points()
         if start == False:
             return
-        with open('tests/tasks01_a20_central.csv', 'a') as fp:
+        with open(f'tests/tasks01_a{self.max_cars}_t{self.max_cars}_central.csv', 'a') as fp:
             fp.write(f'{start};{end};{int(time)}\n')
         new_task = Task(start, end, self.map)
         new_task.activate()
@@ -129,11 +130,7 @@ class Spawn_Points:
                 if t.start == point[0] or t.end == point[0]:
                     skip = True
                     break
-            for car in self.cars:
-                car_pos = (car.y, car.x)
-                if car_pos == point[0]:
-                    skip = True
-                    break
+
             if skip:
                 continue
             free.append(point)
@@ -152,8 +149,18 @@ class Spawn_Points:
             if self.map.map[point_loc[0]][point_loc[1]].__class__.__name__ == 'Route':
                 self.map.map[point_loc[0]][point_loc[1]] = Task_Point()
 
-    def is_free(self, y, x):
-        for car in self.cars:
-            if car.x == x and car.y == y:
-                return False
-        return True
+
+    def is_on_crossroads(self, bitman, node_position):
+        count = 0
+        if node_position[0] > 0 and bitman[node_position[0] - 1][node_position[1]] == 0:
+            count += 1
+        if node_position[1] > 0 and bitman[node_position[0]][node_position[1] - 1] == 0:
+            count += 1
+        if node_position[0] < len(bitman) and bitman[node_position[0] + 1][node_position[1]] == 0:
+            count += 1
+        if node_position[1] < len(bitman[0]) and bitman[node_position[0]][node_position[1] + 1] == 0:
+            count += 1
+        if count > 2:
+            return True
+        else:
+            return False

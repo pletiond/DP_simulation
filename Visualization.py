@@ -133,7 +133,7 @@ class Visualization:
                     if end or auto:
                         break
 
-                if len(self.spawn_points.tasks) < 20:
+                while len(self.spawn_points.tasks) < self.spawn_points.max_cars:
                     self.spawn_points.create_task(steps / self.ticks)
 
                 self.solver.do_step()

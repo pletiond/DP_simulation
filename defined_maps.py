@@ -194,11 +194,13 @@ def get_large_map1(tile_len, speed):
     ]
     cars = []
     tasks = []
-    spawn_points = Spawn_Points(tasks, map, [])
-    cars_points = [Car_Point(map, (2, 3), tile_len, 20, speed),
-                   Car_Point(map, (2, 11), tile_len, 20, speed),
-                   Car_Point(map, (8, 3), tile_len, 20, speed),
-                   Car_Point(map, (8, 11), tile_len, 20, speed)
+    max_cars = 30
+    spawn_points = Spawn_Points(tasks, map, [], max_cars)
+
+    cars_points = [Car_Point(map, (2, 3), tile_len, max_cars, speed),
+                   Car_Point(map, (2, 11), tile_len, max_cars, speed),
+                   Car_Point(map, (8, 3), tile_len, max_cars, speed),
+                   Car_Point(map, (8, 11), tile_len, max_cars, speed)
                    ]
 
     # for i in range(2, height - 2, 3):

@@ -28,6 +28,16 @@ class TP:
 
     def do_step(self):
         print(f'\n\nTime: {self.current_time}')
+        for a in self.cars:
+            for b in self.cars:
+                if a == b:
+                    continue
+                if a.x == b.x and a.y == b.y and a.orientation == b.orientation:
+                    print('LOCATION ERROR')
+                    print(a)
+                    print(b)
+                    input('.......')
+
         self.park_cars()
         self.check_tasks()
         for i in range(len(self.cars)):
@@ -119,7 +129,7 @@ class TP:
                     best_loc = cp.location
 
             route3, all_orientations3 = self.astar(car.id, self.tasks[i].end, best_loc, all_orientations2[-1],
-                                                   offset=len(route) + len(route2) - 1)
+                                                   offset=len(route) + len(route2) - 2)
             if route3 == False:
                 continue
             route = route[0:-1] + route2[0:-1] + route3
@@ -146,7 +156,6 @@ class TP:
         self.reserve_route(car, new_route, new_orientations)
 
         return True
-
 
     def delete_future_plans(self, car):
         found = True
@@ -352,15 +361,16 @@ class TP:
         return np.sqrt((b[0] - a[0]) ** 2 + (b[1] - a[1]) ** 2)
 
     def park_cars(self):
-        for car in self.cars:
-            if car.possible_task is not None:
+        to_remove = []
+        for i in range(len(self.cars)):
+            if self.cars[i].possible_task is not None:
                 continue
-            l = (car.y, car.x)
+            car_loc = (self.cars[i].y, self.cars[i].x)
             for cp in self.car_points:
-                if cp.location == l:
-                    print(f'Parking {car}')
-                    self.cars.remove(car)
-                    self.delete_future_plans(car)
+                if cp.location == car_loc:
+                    to_remove.append(i)
+        for j in to_remove[::-1]:
+            self.cars.pop(j)
 
 
 class ANode():

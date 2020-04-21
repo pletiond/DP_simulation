@@ -266,13 +266,16 @@ class Central:
             route.pop(0)
 
     def park_cars(self):
-        for car in self.cars:
-            if car.possible_task is not None:
+        to_remove = []
+        for i in range(len(self.cars)):
+            if self.cars[i].possible_task is not None:
                 continue
-            l = (car.y, car.x)
+            car_loc = (self.cars[i].y, self.cars[i].x)
             for cp in self.car_points:
-                if cp.location == l:
-                    self.cars.remove(car)
+                if cp.location == car_loc:
+                    to_remove.append(i)
+        for j in to_remove[::-1]:
+            self.cars.pop(j)
 
     def unpark_cars(self):
         for cp in self.car_points:
@@ -340,7 +343,7 @@ class CBS:
 
                 # print('\n')
                 for a in first_conflict['agents']:
-                    # print(a)
+                    #print(a)
                     new_node = Node()
                     new_node.constraints = self.curr_node.constraints.copy()
                     new_node.edge_constraints = self.curr_node.edge_constraints.copy()
@@ -359,7 +362,7 @@ class CBS:
             # Edge conflict
             else:
                 first_conflict = edge_conflicts[0]
-                #print(first_conflict)
+                print(first_conflict)
 
                 # print('\n')
                 for a in first_conflict['agents']:
@@ -383,6 +386,7 @@ class CBS:
         # Map.print_map(None,self.map)
         # print('Init----')
         for agent in self.agents:
+            print(agent)
             id = agent['id']
             orientation = agent['orientation']
             # print(f'Agent {id}:')
@@ -497,15 +501,15 @@ class CBS:
                     for a2 in value:
                         if a1 == a2:
                             continue
-                        if all_orientations[a1][i] == ((all_orientations[a2][i] + 2) % 4):
-                            if not i + 2 > len(all_orientations[a1]) and not i + 2 > len(all_orientations[a2]):
+                        #if all_orientations[a1][i] == ((all_orientations[a2][i] + 2) % 4):
+                        #    if not i + 2 > len(all_orientations[a1]) and not i + 2 > len(all_orientations[a2]):
 
-                                o1 = all_orientations[a1][i + 1] - all_orientations[a1][i]
-                                o2 = all_orientations[a2][i + 1] - all_orientations[a2][i]
-                                if (o1 == 0 and o2 == -1) or (o2 == 0 and o1 == -1):
-                                    ...
-                                else:
-                                    continue
+                        #        o1 = all_orientations[a1][i + 1] - all_orientations[a1][i]
+                        #        o2 = all_orientations[a2][i + 1] - all_orientations[a2][i]
+                         #       if (o1 == 0 and o2 == -1) or (o2 == 0 and o1 == -1):
+                        #            ...
+                        #        else:
+                         #           continue
                         conflict = {'agents': [a1, a2], 'position': key, 'time': i}
                         if len(value) == 2 and not self.is_on_crossroads(key) and not all_orientations[a1][i] == \
                                                                                       all_orientations[a2][i]:
@@ -541,7 +545,7 @@ class CBS:
         """Returns a list of tuples as a path from the given start to the given end in the given maze"""
 
         # Create start and end node
-        print('a star')
+        #print(f'Agent {agent_id} - a star')
         start_node = ANode(None, start)
         start_node.g = start_node.h = start_node.f = 0
         start_node.orientation = orientation
@@ -627,6 +631,8 @@ class CBS:
             for child in children:
                 # Create the f, g, and h values
                 child.g = current_node.g + 1
+                if child.g > 500:
+                    continue
                 child.h = ((child.position[0] - end_node.position[0]) ** 2) + (
                         (child.position[1] - end_node.position[1]) ** 2)
                 child.f = child.g + child.h
@@ -650,7 +656,7 @@ class CBS:
                     continue
 
                 # Add the child to the open list
-                print(f'Agent: {agent_id} - {child}')
+                #print(f'Agent: {agent_id} - {child}')
                 open_list.append(child)
 
         return False, False
