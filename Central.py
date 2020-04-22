@@ -55,10 +55,9 @@ class Central:
                     print(b)
                     input('.......')
 
-        self.check_tasks()
-        # for t in self.tasks:
-        #    print(f'TID {t.task_id} - {t.start} - {t.end} - {t.state}')
-        # print()
+        for t in self.tasks:
+            print(t)
+        print()
         for c in self.cars:
             print(c)
         self.park_cars()
@@ -69,6 +68,7 @@ class Central:
         # print('Move cars')
         self.park_cars()
         self.move_cars()
+        self.check_tasks()
         self.current_time += 1
 
     def check_tasks(self):
@@ -271,25 +271,20 @@ class Central:
             if self.cars[i].possible_task is not None:
                 continue
             car_loc = (self.cars[i].y, self.cars[i].x)
-            for cp in self.car_points:
-                if cp.location == car_loc:
+            for cp in range(len(self.car_points)):
+                if self.car_points[cp].location == car_loc:
                     to_remove.append(i)
+                    self.car_points[cp].cars_available += 1
+
         for j in to_remove[::-1]:
             self.cars.pop(j)
 
     def unpark_cars(self):
-        for cp in self.car_points:
-            if len(self.cars) >= cp.max_cars:
+        for cp in range(len(self.car_points)):
+            if self.car_points[cp].cars_available == 0:
                 continue
-            empty = True
-            for car in self.cars:
-                l = (car.y, car.x)
-                if cp.location == l:
-                    empty = False
-                    break
-            if not empty:
-                continue
-            loc = cp.location
+
+            loc = self.car_points[cp].location
             if self.bitmap[loc[0] - 1][loc[1]] == 0:
                 orientation = 'UP'
             elif self.bitmap[loc[0] + 1][loc[1]] == 0:
@@ -300,8 +295,17 @@ class Central:
                 orientation = 'RIGHT'
             else:
                 continue
-            self.cars.append(Car(loc, self.map, cp.tile_len, orientation, cp.speed))
+            empty = True
+            for car in self.cars:
+                l = (car.y, car.x)
+                if self.car_points[cp].location == l and car.orientation == orientations[orientation]:
+                    empty = False
+                    break
+            if not empty:
+                continue
+            self.cars.append(Car(loc, self.map, self.car_points[cp].tile_len, orientation, self.car_points[cp].speed))
             self.do_replan = True
+            self.car_points[cp].cars_available -= 1
 
 
 class CBS:

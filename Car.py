@@ -227,10 +227,10 @@ class Car:
 
 class Car_Point:
 
-    def __init__(self, map, location, tile_len, max_cars, speed):
+    def __init__(self, map, location, tile_len, cars_available, speed):
         self.map = map
         self.location = location
-        self.max_cars = max_cars
+        self.cars_available = cars_available
         self.tile_len = tile_len
         self.speed = speed
 
@@ -243,3 +243,7 @@ class Car_Point:
                           (self.location[0] - 1) * self.tile_len,
                           self.tile_len,
                           self.tile_len])
+        myFont = pygame.font.SysFont('Helvetica', 30)
+        task_id = myFont.render(str(self.cars_available), 1, (255, 255, 255))
+        screen.blit(task_id, ((self.location[1] - 1) * self.tile_len + self.tile_len * 0.3,
+                              (self.location[0] - 1) * self.tile_len + self.tile_len * 0.2))

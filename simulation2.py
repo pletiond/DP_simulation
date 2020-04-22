@@ -15,6 +15,6 @@ tp = TP(cars, map, tasks, cars_points)
 tpts = TPTS(cars, map, tasks, cars_points)
 vis = Visualization(map.to_bitman_objects(), tile_len, cars=cars, ticks=ticks, spawn_points=spawn_points,
                     cars_points=cars_points,
-                    solver=central)
+                    solver=tp)
 
 vis.run()

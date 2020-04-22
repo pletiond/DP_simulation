@@ -116,7 +116,7 @@ class Spawn_Points:
         start, end = self.get_random_free_points()
         if start == False:
             return
-        with open(f'tests/tasks01_a{self.max_cars}_t{self.max_cars}_central.csv', 'a') as fp:
+        with open(f'tests/tasks01_a{self.max_cars}_t{self.max_cars}_tp.csv', 'a') as fp:
             fp.write(f'{start};{end};{int(time)}\n')
         new_task = Task(start, end, self.map)
         new_task.activate()

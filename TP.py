@@ -39,29 +39,23 @@ class TP:
                     input('.......')
 
         self.park_cars()
-        self.check_tasks()
+
         for i in range(len(self.cars)):
             if self.cars[i].possible_task is None:
                 self.plan_route_for_car(self.cars[i])
         self.try_to_add_car()
 
         self.move_cars()
+        self.check_tasks()
         self.current_time += 1
 
     def try_to_add_car(self):
 
-        for cp in self.car_points:
-            if len(self.cars) >= cp.max_cars or len(self.tasks) <= len(self.cars):
-                break
-            empty = True
-            for car in self.cars:
-                l = (car.y, car.x)
-                if cp.location == l:
-                    empty = False
-                    break
-            if not empty:
+        for cp in range(len(self.car_points)):
+            if self.car_points[cp].cars_available == 0:
                 continue
-            loc = cp.location
+
+            loc = self.car_points[cp].location
             if self.bitmap[loc[0] - 1][loc[1]] == 0:
                 orientation = 'UP'
             elif self.bitmap[loc[0] + 1][loc[1]] == 0:
@@ -72,11 +66,22 @@ class TP:
                 orientation = 'RIGHT'
             else:
                 continue
-            new_car = Car(loc, self.map, cp.tile_len, orientation, cp.speed)
+            empty = True
+            for car in self.cars:
+                l = (car.y, car.x)
+                if self.car_points[cp].location == l and car.orientation == orientations[orientation]:
+                    empty = False
+                    break
+            if not empty:
+                continue
+            new_car = Car(loc, self.map, self.car_points[cp].tile_len, orientation, self.car_points[cp].speed)
             self.cars.append(new_car)
+
             res = self.plan_route_for_car(new_car)
             if not res:
                 self.cars.remove(new_car)
+                continue
+            self.car_points[cp].cars_available -= 1
 
     def check_tasks(self):
         to_remove = []
@@ -366,9 +371,11 @@ class TP:
             if self.cars[i].possible_task is not None:
                 continue
             car_loc = (self.cars[i].y, self.cars[i].x)
-            for cp in self.car_points:
-                if cp.location == car_loc:
+            for cp in range(len(self.car_points)):
+                if self.car_points[cp].location == car_loc:
                     to_remove.append(i)
+                    self.car_points[cp].cars_available += 1
+
         for j in to_remove[::-1]:
             self.cars.pop(j)
 

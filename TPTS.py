@@ -29,7 +29,6 @@ class TPTS:
     def do_step(self):
         print(f'\n\nTime: {self.current_time}')
         self.park_cars()
-        self.check_tasks()
 
         for i in range(len(self.cars)):
             if self.cars[i].possible_task is None:
@@ -37,6 +36,7 @@ class TPTS:
                 self.plan_route_to_start_task(self.cars[i])
         self.try_to_add_car()
         self.move_cars()
+        self.check_tasks()
         self.current_time += 1
 
     def try_to_add_car(self):
