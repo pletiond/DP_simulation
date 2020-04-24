@@ -1,31 +1,32 @@
 import random
-import csv
+from ast import literal_eval as make_tuple
 
 class Task:
 
-    def __init__(self, start, end, map):
+    def __init__(self, start, end, map, time, out_file):
         self.map = map
+        self.out_file = out_file
         self.task_id = self.map.task_id_max
         self.map.task_id_max += 1
         self.start = start
         self.end = end
         self.state = 'NEW'
         self.car = None
-        # self.map.map[self.start[0]][self.start[1]] = Task_Point()
-        # self.map.map[self.end[0]][self.end[1]] = Task_Point()
+        self.in_time = time
+        self.assign_time = None
+        self.complete_time = None
 
-    def activate(self):
-        # self.map.map[self.start[0]][self.start[1]] = Task_Start(self.task_id, self)
-        # self.map.map[self.end[0]][self.end[1]] = Task_End(self.task_id, self)
-        self.state = 'ACTIVATED'
-        self.car = None
-
-    def assign(self, car):
+    def assign(self, car, time):
         self.state = 'ASSIGNED'
         self.car = car
+        self.assign_time = time
 
-    def complete(self):
+    def complete(self, time):
         self.state = 'COMPLETED'
+        self.complete_time = time
+        with open(f'{self.out_file}.csv', 'a') as fp:
+            fp.write(
+                f'{self.task_id};{self.start};{self.end};{int(self.in_time)};{int(self.assign_time)};{int(self.complete_time)};{self.car.id}\n')
 
     def __str__(self):
         return f'TID: {self.task_id} From: {self.start} To: {self.end}'
@@ -95,12 +96,13 @@ class Task_Point:
 
 class Spawn_Points:
 
-    def __init__(self, tasks, map, cars, max_cars):
+    def __init__(self, tasks, map, cars, max_tasks, out_file):
         self.tasks = tasks
         self.map = map
         self.cars = cars
         self.points = []
-        self.max_cars = max_cars
+        self.max_tasks = max_tasks
+        self.out_file = out_file
         bitmap = map.to_bitman()
         for row in range(len(bitmap)):
             for col in range(len(bitmap[row])):
@@ -108,18 +110,23 @@ class Spawn_Points:
                     self.add_spawn_point((row, col), 1, '')
         print(f'Total spawn points: {len(self.points)}')
 
+        with open(f'{self.out_file}.csv', 'a') as fp:
+            fp.write(f'task_id;start;end;in_time;assign_time;complete_time;car_id\n')
+
     def add_spawn_point(self, location, spawn_rate, orientation):
         self.points.append((location, spawn_rate, orientation))
         # self.map.map[location[0]][location[1]] = Task_Point()
+
+    def do_step(self, time):
+        while len(self.tasks) < self.max_tasks:
+            self.create_task(time)
 
     def create_task(self, time):
         start, end = self.get_random_free_points()
         if start == False:
             return
-        with open(f'tests/tasks01_a{self.max_cars}_t{self.max_cars}_tp.csv', 'a') as fp:
-            fp.write(f'{start};{end};{int(time)}\n')
-        new_task = Task(start, end, self.map)
-        new_task.activate()
+
+        new_task = Task(start, end, self.map, time, self.out_file)
         self.tasks.append(new_task)
 
     def get_random_free_points(self):
@@ -164,3 +171,37 @@ class Spawn_Points:
             return True
         else:
             return False
+
+
+class Static_Points:
+    def __init__(self, tasks, map, cars, in_file, out_file):
+        self.tasks = tasks
+        self.map = map
+        self.cars = cars
+        self.future_tasks = []
+        self.in_file = in_file
+        self.out_file = out_file
+
+        self.load_tasks()
+        with open(f'{self.out_file}.csv', 'a') as fp:
+            fp.write(f'task_id;start;end;in_time;assign_time;complete_time;car_id\n')
+
+    def do_step(self, time):
+        while len(self.future_tasks) and self.future_tasks[0][0] == time:
+            t = self.future_tasks.pop(0)
+            new_task = Task(t[1], t[2], self.map, time, self.out_file)
+            self.tasks.append(new_task)
+        if len(self.future_tasks) == 0:
+            exit(0)
+
+    def load_tasks(self):
+        file1 = open(self.in_file, 'r')
+        lines = file1.readlines()
+
+        for line in lines[1:-1]:
+            items = line.split(';')
+            start = make_tuple(items[1])
+            end = make_tuple(items[2])
+            time = int(items[3])
+            self.future_tasks.append((time, start, end))
+        self.future_tasks.sort(key=lambda x: x[0])

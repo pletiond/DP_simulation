@@ -37,7 +37,7 @@ class Visualization:
             print(i)
 
         self.solver = solver
-        self.spawn_points = spawn_points
+        self.task_points = spawn_points
         self.cars_points = cars_points
         self.cars = cars
         self.tile_len = tile_len
@@ -66,10 +66,7 @@ class Visualization:
                 vis_row.append(tile)
 
             self.vis_map.append(vis_row)
-        # for s in self.spawn_points.points:
-        #    pos = s[0]
-        #    new_pos = (pos[0] -1, pos[1] -1)
-        #    self.vis_map[pos[0]-1][pos[1]-1] = Task_Down((new_pos[0] * self.tile_len, new_pos[1] * self.tile_len), self.tile_len)
+
 
     def encode_tile(self, row, column):
         code = ''
@@ -133,9 +130,7 @@ class Visualization:
                     if end or auto:
                         break
 
-                while len(self.spawn_points.tasks) < self.spawn_points.max_cars - 2:
-                    self.spawn_points.create_task(steps / self.ticks)
-
+                self.task_points.do_step(steps // self.ticks)
                 self.solver.do_step()
 
             for event in pygame.event.get():

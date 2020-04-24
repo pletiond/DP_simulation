@@ -31,11 +31,8 @@ class Central:
         self.tasks = tasks
         self.bitmap = self.map.to_bitman_objects()
         self.car_points = car_points
-        # self.time_plans = []
         self.current_time = 0
-        # for i in range(100):
-        #    self.time_plans.append(self.bitmap.tolist())
-        # self.current_time = 0
+
         self.routes = {}
         for cp in car_points:
             l = cp.location
@@ -58,10 +55,14 @@ class Central:
         for t in self.tasks:
             print(t)
         print()
+        test_set = set()
         for c in self.cars:
             print(c)
-        self.park_cars()
+            if c.current_task is not None:
+                test_set.add(c.current_task)
+        self.park_cars(only_in=True)
         self.unpark_cars()
+        self.do_replan = True
         if self.do_replan:
             print('Replan')
             self.replan()
@@ -72,6 +73,7 @@ class Central:
         self.current_time += 1
 
     def check_tasks(self):
+        to_remove = []
         for t in range(len(self.tasks)):
             task = self.tasks[t]
             for c in range(len(self.cars)):
@@ -80,19 +82,19 @@ class Central:
                 if car_pos == task.start and car.current_task is None and task.car is None:
                     car.current_task = task
                     car.possible_task = task
-                    task.assign(car)
+                    task.assign(car, self.current_time)
                     self.map.map[car.y][car.x] = Task_Point()
                     self.do_replan = True
                 elif car_pos == task.end and car.current_task is not None and car.current_task.task_id == task.task_id:
                     car.current_task = None
                     car.possible_task = None
-                    task.complete()
+                    self.tasks[t].complete(self.current_time)
                     self.do_replan = True
+                    to_remove.append(t)
 
                     self.map.map[car.y][car.x] = Task_Point()
-        for t in self.tasks:
-            if t.state == 'COMPLETED':
-                self.tasks.remove(t)
+        for t in to_remove[::-1]:
+            self.tasks.pop(t)
 
     def replan(self):
         self.assign_free_agents()
@@ -202,6 +204,7 @@ class Central:
                         key.possible_task = value
                         if (key.y, key.x) == value.start:
                             key.current_task = value
+                            value.assign(key, self.current_time)
 
     def get_free_agents(self):
         free_agents = []
@@ -265,45 +268,16 @@ class Central:
                 print('ERROR CANT MOVE!!!---')
             route.pop(0)
 
-    def park_cars(self):
-        to_remove = []
-        for i in range(len(self.cars)):
-            if self.cars[i].possible_task is not None:
-                continue
-            car_loc = (self.cars[i].y, self.cars[i].x)
-            for cp in range(len(self.car_points)):
-                if self.car_points[cp].location == car_loc:
-                    to_remove.append(i)
-                    self.car_points[cp].cars_available += 1
-
-        for j in to_remove[::-1]:
-            self.cars.pop(j)
+    def park_cars(self, only_in=False):
+        for cp in range(len(self.car_points)):
+            self.car_points[cp].park_cars(self.current_time, only_in)
 
     def unpark_cars(self):
         for cp in range(len(self.car_points)):
-            if self.car_points[cp].cars_available == 0:
+            if not self.car_points[cp].is_car_available():
                 continue
 
-            loc = self.car_points[cp].location
-            if self.bitmap[loc[0] - 1][loc[1]] == 0:
-                orientation = 'UP'
-            elif self.bitmap[loc[0] + 1][loc[1]] == 0:
-                orientation = 'DOWN'
-            elif self.bitmap[loc[0]][loc[1] - 1] == 0:
-                orientation = 'LEFT'
-            elif self.bitmap[loc[0]][loc[1] + 1] == 0:
-                orientation = 'RIGHT'
-            else:
-                continue
-            empty = True
-            for car in self.cars:
-                l = (car.y, car.x)
-                if self.car_points[cp].location == l and car.orientation == orientations[orientation]:
-                    empty = False
-                    break
-            if not empty:
-                continue
-            self.cars.append(Car(loc, self.map, self.car_points[cp].tile_len, orientation, self.car_points[cp].speed))
+            self.car_points[cp].unpark_car()
             self.do_replan = True
             self.car_points[cp].cars_available -= 1
 

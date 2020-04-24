@@ -28,44 +28,35 @@ class TPTS:
 
     def do_step(self):
         print(f'\n\nTime: {self.current_time}')
-        self.park_cars()
+        self.park_cars(only_in=True)
+
+        for t in self.tasks:
+            print(t)
+        print()
+        for c in self.cars:
+            print(c)
 
         for i in range(len(self.cars)):
             if self.cars[i].possible_task is None:
-                self.delete_future_plans(self.cars[i])
-                self.plan_route_to_start_task(self.cars[i])
+                # self.delete_future_plans(self.cars[i])
+                self.plan_route_for_car(self.cars[i])
         self.try_to_add_car()
+        self.park_cars()
         self.move_cars()
         self.check_tasks()
         self.current_time += 1
 
     def try_to_add_car(self):
+        for cp in range(len(self.car_points)):
+            if not self.car_points[cp].is_car_available():
+                continue
 
-        for cp in self.car_points:
-            if len(self.cars) >= cp.max_cars or len(self.tasks) <= len(self.cars):
-                break
-            empty = True
-            for car in self.cars:
-                l = (car.y, car.x)
-                if cp.location == l:
-                    empty = False
-                    break
-            if not empty:
+            new_car = self.car_points[cp].unpark_car()
+
+            res = self.plan_route_for_car(new_car)
+            if not res:
+                self.park_cars()
                 continue
-            loc = cp.location
-            if self.bitmap[loc[0] - 1][loc[1]] == 0:
-                orientation = 'UP'
-            elif self.bitmap[loc[0] + 1][loc[1]] == 0:
-                orientation = 'DOWN'
-            elif self.bitmap[loc[0]][loc[1] - 1] == 0:
-                orientation = 'LEFT'
-            elif self.bitmap[loc[0]][loc[1] + 1] == 0:
-                orientation = 'RIGHT'
-            else:
-                continue
-            new_car = Car(loc, self.map, cp.tile_len, orientation, cp.speed)
-            self.cars.append(new_car)
-            self.plan_route_to_start_task(new_car)
 
     def check_tasks(self):
         to_remove = []
@@ -77,19 +68,19 @@ class TPTS:
                 if car_pos == task.start and car.possible_task == task and car.current_task is None:
                     car.current_task = task
                     car.possible_task = task
-                    task.assign(car)
+                    task.assign(car, self.current_time)
                     self.map.map[car.y][car.x] = Task_Point()
                 elif car_pos == task.end and car.current_task == task:
                     car.current_task = None
                     car.possible_task = None
-                    task.complete()
+                    task.complete(self.current_time)
                     to_remove.append(t)
 
                     self.map.map[car.y][car.x] = Task_Point()
         for t in to_remove[::-1]:
             r = self.tasks.pop(t)
 
-    def plan_route_to_start_task(self, car):
+    def plan_route_for_car(self, car):
         print(f'Planning route to start for car  {car.id}')
 
         options = []
@@ -100,8 +91,27 @@ class TPTS:
             route, all_orientations = self.astar(car.id, (car.y, car.x), self.tasks[i].start, car.orientation)
             if route == False:
                 continue
+            route2, all_orientations2 = self.astar(car.id, self.tasks[i].start, self.tasks[i].end, all_orientations[-1],
+                                                   offset=len(route) - 1)
+            if route2 == False:
+                continue
+
+            best_loc = None
+            min_len = None
+            loc = self.tasks[i].end
+            for cp in self.car_points:
+                if best_loc is None or self.heuristic(loc, cp.location) < min_len:
+                    min_len = self.heuristic(loc, cp.location)
+                    best_loc = cp.location
+
+            route3, all_orientations3 = self.astar(car.id, self.tasks[i].end, best_loc, all_orientations2[-1],
+                                                   offset=len(route) + len(route2) - 2)
+            if route3 == False:
+                continue
+
             distance = len(route)
-            options.append((distance, self.tasks[i], route, all_orientations))
+            options.append((distance, self.tasks[i], route, all_orientations, route2[0:-1] + route3,
+                            all_orientations2[0:-1] + all_orientations3))
 
         options.sort(key=lambda x: x[0])
         option = None
@@ -119,29 +129,30 @@ class TPTS:
                 continue
             car.possible_task = task
             car2.possible_task = None
-            self.delete_future_plans(car2)
-            print('REPLANNING!!!')
-            self.plan_route_to_start_task(car2)
+
+            print('Replanning!!!')
+            if not self.plan_route_for_car(car2):
+                car2.possible_task = task
+                car.possible_task = None
+                continue
             break
         if option is None:
-            self.go_to_parking(car)
-            return
+            # self.go_to_parking(car)
+            return True
         shortest_dis = option[0]
         next_task = option[1]
-        new_route = option[2]
-        new_orientations = option[3]
+        new_route = option[2][0:-1] + option[4]
+        new_orientations = option[3][0:-1] + option[5]
         if shortest_dis == 1:
             car.current_task = next_task
-            next_task.assign(car)
+            next_task.assign(car, self.current_time)
             self.map.map[car.y][car.x] = Task_Point()
 
         car.possible_task = next_task
-        print(new_route)
-
-        route2, all_orientations2 = self.astar(car.id, next_task.start, next_task.end, new_orientations[-1],
-                                               offset=len(new_route) - 1)
-        print(route2)
-        self.reserve_route(car, new_route[0:-1] + route2, new_orientations[0:-1] + all_orientations2)
+        print(f'A{car.id} - {new_route}')
+        self.delete_future_plans(car)
+        self.reserve_route(car, new_route, new_orientations)
+        return True
 
     def get_task_car(self, task):
         for i in range(len(self.cars)):
@@ -373,14 +384,9 @@ class TPTS:
     def heuristic(a, b):
         return np.sqrt((b[0] - a[0]) ** 2 + (b[1] - a[1]) ** 2)
 
-    def park_cars(self):
-        for car in self.cars:
-            if car.possible_task is not None:
-                continue
-            l = (car.y, car.x)
-            for cp in self.car_points:
-                if cp.location == l:
-                    self.cars.remove(car)
+    def park_cars(self, only_in=False):
+        for cp in range(len(self.car_points)):
+            self.car_points[cp].park_cars(self.current_time, only_in)
 
 
 class ANode():

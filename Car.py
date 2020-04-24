@@ -7,17 +7,22 @@ orientations = ['LEFT', 'UP', 'RIGHT', 'DOWN']
 
 class Car:
 
-    def __init__(self, start_location, map, tile_len, orientation, speed):
+    def __init__(self, start_location, map, tile_len, orientation, speed, new_id=None):
         self.x = start_location[1]
         self.y = start_location[0]
         self.map = map
         # self.map.map[self.y][self.x] = self
         self.possible_task = None
         self.current_task = None
-        self.id = self.map.car_id_max
-        self.map.car_id_max += 1
+        if not new_id:
+            self.id = self.map.car_id_max
+            self.map.car_id_max += 1
+        else:
+            self.id = new_id
+        self.park_time = 0
 
         size = (tile_len * 0.6, tile_len * 0.3)
+        self.size = size
         self.tile_len = tile_len
         self.image = pygame.Surface(size)
         pygame.draw.rect(self.image, (0, 0, 255), (0, 0, tile_len * 0.6, tile_len * 0.3))
@@ -130,6 +135,12 @@ class Car:
         self.angle %= 360
 
     def draw(self, screen):
+        if self.current_task is not None:
+            pygame.draw.rect(self.image, (255, 0, 0), (0, 0, self.tile_len * 0.6, self.tile_len * 0.3))
+            pygame.draw.line(self.image, (255, 255, 0), (self.size[0] * 0.9, 0), (self.size[0] * 0.9, self.size[1]), 5)
+        else:
+            pygame.draw.rect(self.image, (0, 0, 255), (0, 0, self.tile_len * 0.6, self.tile_len * 0.3))
+            pygame.draw.line(self.image, (255, 255, 0), (self.size[0] * 0.9, 0), (self.size[0] * 0.9, self.size[1]), 5)
         self.blitRotate(screen, self.image.copy(), self.pos, (self.w // 2, self.h // 2), self.angle)
         myFont = pygame.font.SysFont('Helvetica', 10)
         task_id = myFont.render(str(self.id), 1, (255, 255, 255))
@@ -177,9 +188,6 @@ class Car:
         self.orientation = (self.orientation - 1) % 4
         self.steps_to_goal.append((self.tile_len / self.speed, 40))
         for i in range(self.speed // 2):
-            # if i == steps:
-            #    self.steps_to_goal.append((0, 90))
-
             self.steps_to_goal.append((self.tile_len * 0.6 / (self.speed // 2), 0))
 
         self.steps_to_goal.append((0, 50))
@@ -218,8 +226,9 @@ class Car:
             y_plus = 0.2
         self.pos = [x * self.tile_len + x_plus * self.tile_len, y * self.tile_len + y_plus * self.tile_len]
 
+
     def __str__(self):
-        return f'CID: {self.id}, pos: {self.y} {self.x}, pos_task: {self.possible_task} curr_task: {self.current_task}'
+        return f'CID: {self.id}, pos: {self.y} {self.x}, o: {self.orientation}, pos_task: {self.possible_task} curr_task: {self.current_task}'
 
     def __repr__(self):
         return self.__str__()
@@ -227,14 +236,65 @@ class Car:
 
 class Car_Point:
 
-    def __init__(self, map, location, tile_len, cars_available, speed):
+    def __init__(self, map, cars, location, tile_len, cars_available, speed):
         self.map = map
+        self.cars = cars
         self.location = location
         self.cars_available = cars_available
         self.tile_len = tile_len
         self.speed = speed
-
+        self.bitmap = self.map.to_bitman_objects()
         self.color = (0, 0, 0)  # black
+        self.free_cars = []
+
+        if self.bitmap[location[0] - 1][location[1]] == 0:
+            self.orientation = 'UP'
+        elif self.bitmap[location[0] + 1][location[1]] == 0:
+            self.orientation = 'DOWN'
+        elif self.bitmap[location[0]][location[1] - 1] == 0:
+            self.orientation = 'LEFT'
+        elif self.bitmap[location[0]][location[1] + 1] == 0:
+            self.orientation = 'RIGHT'
+        else:
+            print('No available car exit!')
+            return
+
+        for _ in range(cars_available):
+            self.free_cars.append(Car(self.location, self.map, self.tile_len, self.orientation, self.speed))
+
+    def park_cars(self, time, only_in):
+        to_park = []
+        for i in range(len(self.cars)):
+            if self.cars[i].possible_task is not None:
+                continue
+            car_loc = (self.cars[i].y, self.cars[i].x)
+            if self.location == car_loc:
+                to_park.append(i)
+        for j in to_park[::-1]:
+            car = self.cars.pop(j)
+            if only_in:
+                car.park_time = time
+            self.free_cars.append(car)
+
+    def unpark_car(self):
+        empty = True
+        for car in self.cars:
+            l = (car.y, car.x)
+            if self.location == l and car.orientation == orientations.index(self.orientation):
+                empty = False
+                break
+        if not empty:
+            return False
+        self.free_cars.sort(key=lambda x: x.park_time)
+        car = self.free_cars.pop(0)
+        car = Car(self.location, self.map, self.tile_len, self.orientation, self.speed, car.id)
+        self.cars.append(car)
+        return car
+
+    def is_car_available(self):
+        if len(self.free_cars) > 0:
+            return True
+        return False
 
     def draw(self, screen):
         pygame.draw.rect(screen,
@@ -244,6 +304,6 @@ class Car_Point:
                           self.tile_len,
                           self.tile_len])
         myFont = pygame.font.SysFont('Helvetica', 30)
-        task_id = myFont.render(str(self.cars_available), 1, (255, 255, 255))
+        task_id = myFont.render(str(len(self.free_cars)), 1, (255, 255, 255))
         screen.blit(task_id, ((self.location[1] - 1) * self.tile_len + self.tile_len * 0.3,
                               (self.location[0] - 1) * self.tile_len + self.tile_len * 0.2))

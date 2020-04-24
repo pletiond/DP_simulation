@@ -38,7 +38,7 @@ class TP:
                     print(b)
                     input('.......')
 
-        self.park_cars()
+        self.park_cars(only_in=True)
 
         for i in range(len(self.cars)):
             if self.cars[i].possible_task is None:
@@ -50,38 +50,16 @@ class TP:
         self.current_time += 1
 
     def try_to_add_car(self):
-
         for cp in range(len(self.car_points)):
-            if self.car_points[cp].cars_available == 0:
+            if not self.car_points[cp].is_car_available():
                 continue
 
-            loc = self.car_points[cp].location
-            if self.bitmap[loc[0] - 1][loc[1]] == 0:
-                orientation = 'UP'
-            elif self.bitmap[loc[0] + 1][loc[1]] == 0:
-                orientation = 'DOWN'
-            elif self.bitmap[loc[0]][loc[1] - 1] == 0:
-                orientation = 'LEFT'
-            elif self.bitmap[loc[0]][loc[1] + 1] == 0:
-                orientation = 'RIGHT'
-            else:
-                continue
-            empty = True
-            for car in self.cars:
-                l = (car.y, car.x)
-                if self.car_points[cp].location == l and car.orientation == orientations[orientation]:
-                    empty = False
-                    break
-            if not empty:
-                continue
-            new_car = Car(loc, self.map, self.car_points[cp].tile_len, orientation, self.car_points[cp].speed)
-            self.cars.append(new_car)
+            new_car = self.car_points[cp].unpark_car()
 
             res = self.plan_route_for_car(new_car)
             if not res:
-                self.cars.remove(new_car)
+                self.park_cars()
                 continue
-            self.car_points[cp].cars_available -= 1
 
     def check_tasks(self):
         to_remove = []
@@ -93,12 +71,12 @@ class TP:
                 if car_pos == task.start and car.possible_task == task and car.current_task is None:
                     car.current_task = task
                     car.possible_task = task
-                    task.assign(car)
+                    task.assign(car, self.current_time)
                     self.map.map[car.y][car.x] = Task_Point()
                 elif car_pos == task.end and car.current_task == task:
                     car.current_task = None
                     car.possible_task = None
-                    task.complete()
+                    task.complete(self.current_time)
                     to_remove.append(t)
 
                     self.map.map[car.y][car.x] = Task_Point()
@@ -155,7 +133,7 @@ class TP:
         car.possible_task = next_task
         if (car.y, car.x) == next_task.start:
             car.current_task = next_task
-            next_task.assign(car)
+            next_task.assign(car, self.current_time)
             self.map.map[car.y][car.x] = Task_Point()
         self.delete_future_plans(car)
         self.reserve_route(car, new_route, new_orientations)
@@ -365,19 +343,9 @@ class TP:
     def heuristic(a, b):
         return np.sqrt((b[0] - a[0]) ** 2 + (b[1] - a[1]) ** 2)
 
-    def park_cars(self):
-        to_remove = []
-        for i in range(len(self.cars)):
-            if self.cars[i].possible_task is not None:
-                continue
-            car_loc = (self.cars[i].y, self.cars[i].x)
-            for cp in range(len(self.car_points)):
-                if self.car_points[cp].location == car_loc:
-                    to_remove.append(i)
-                    self.car_points[cp].cars_available += 1
-
-        for j in to_remove[::-1]:
-            self.cars.pop(j)
+    def park_cars(self, only_in=False):
+        for cp in range(len(self.car_points)):
+            self.car_points[cp].park_cars(self.current_time, only_in)
 
 
 class ANode():
