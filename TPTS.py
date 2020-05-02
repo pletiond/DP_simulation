@@ -33,8 +33,11 @@ class TPTS:
         for t in self.tasks:
             print(t)
         print()
+        test_set = set()
         for c in self.cars:
             print(c)
+            if c.possible_task is not None:
+                test_set.add(c.possible_task)
 
         for i in range(len(self.cars)):
             if self.cars[i].possible_task is None:
@@ -65,15 +68,15 @@ class TPTS:
             for c in range(len(self.cars)):
                 car = self.cars[c]
                 car_pos = (car.y, car.x)
-                if car_pos == task.start and car.possible_task == task and car.current_task is None:
+                if car_pos == task.start and car.possible_task == task and car.current_task is None and task.car is None:
                     car.current_task = task
-                    car.possible_task = task
                     task.assign(car, self.current_time)
                     self.map.map[car.y][car.x] = Task_Point()
-                elif car_pos == task.end and car.current_task == task:
+                elif car_pos == task.end and car.current_task is not None and car.current_task.task_id == task.task_id:
                     car.current_task = None
                     car.possible_task = None
                     task.complete(self.current_time)
+                    print(f'Task {task} completed by {car}')
                     to_remove.append(t)
 
                     self.map.map[car.y][car.x] = Task_Point()
@@ -129,26 +132,43 @@ class TPTS:
                 continue
             car.possible_task = task
             car2.possible_task = None
+            for c in self.cars:
+                if c.possible_task is not None and c.possible_task == task and not c == car:
+                    print(c)
+                    input('same task1')
 
             print('Replanning!!!')
             if not self.plan_route_for_car(car2):
-                car2.possible_task = task
-                car.possible_task = None
+                if car.possible_task == task:
+                    car2.possible_task = task
+                    car.possible_task = None
+                    option = None
+                    for c in self.cars:
+                        if c.possible_task is not None and c.possible_task == task and not c == car2:
+                            print(c)
+                            input('same task2')
                 continue
             break
         if option is None:
             # self.go_to_parking(car)
-            return True
+            return False
+
         shortest_dis = option[0]
         next_task = option[1]
         new_route = option[2][0:-1] + option[4]
         new_orientations = option[3][0:-1] + option[5]
+        for c in self.cars:
+            if c.possible_task is not None and c.possible_task == next_task and not c == car:
+                car.possible_task = None
+                return self.plan_route_for_car(car)
+
         if shortest_dis == 1:
             car.current_task = next_task
             next_task.assign(car, self.current_time)
             self.map.map[car.y][car.x] = Task_Point()
 
         car.possible_task = next_task
+
         print(f'A{car.id} - {new_route}')
         self.delete_future_plans(car)
         self.reserve_route(car, new_route, new_orientations)
@@ -403,3 +423,5 @@ class ANode():
 
     def __eq__(self, other):
         return self.position == other.position
+
+# [(7, 6), (7, 5), (6, 5), (5, 5), (4, 5), (4, 4), (4, 3), (4, 2), (4, 1), (5, 1), (6, 1), (7, 1), (7, 2), (7, 3), (7, 4), (7, 5), (7, 6), (7, 7), (7, 8), (7, 9), (7, 10), (7, 11), (7, 12), (7, 13), (6, 13), (5, 13), (4, 13), (4, 12), (4, 11), (4, 10), (4, 9), (5, 9), (6, 9), (7, 9), (7, 10), (7, 11), (8, 11)]

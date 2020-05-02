@@ -84,7 +84,7 @@ class Central:
                     car.possible_task = task
                     task.assign(car, self.current_time)
                     self.map.map[car.y][car.x] = Task_Point()
-                    self.do_replan = True
+                    # self.do_replan = True
                 elif car_pos == task.end and car.current_task is not None and car.current_task.task_id == task.task_id:
                     car.current_task = None
                     car.possible_task = None

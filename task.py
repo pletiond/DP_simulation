@@ -191,14 +191,14 @@ class Static_Points:
             t = self.future_tasks.pop(0)
             new_task = Task(t[1], t[2], self.map, time, self.out_file)
             self.tasks.append(new_task)
-        if len(self.future_tasks) == 0:
+        if len(self.future_tasks) == 0 and len(self.tasks) == 0:
             exit(0)
 
     def load_tasks(self):
         file1 = open(self.in_file, 'r')
         lines = file1.readlines()
 
-        for line in lines[1:-1]:
+        for line in lines[1:]:
             items = line.split(';')
             start = make_tuple(items[1])
             end = make_tuple(items[2])

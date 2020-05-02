@@ -304,6 +304,6 @@ class Car_Point:
                           self.tile_len,
                           self.tile_len])
         myFont = pygame.font.SysFont('Helvetica', 30)
-        task_id = myFont.render(str(len(self.free_cars)), 1, (255, 255, 255))
-        screen.blit(task_id, ((self.location[1] - 1) * self.tile_len + self.tile_len * 0.3,
+        task_id = myFont.render('P ' + str(len(self.free_cars)), 1, (255, 255, 255))
+        screen.blit(task_id, ((self.location[1] - 1) * self.tile_len + self.tile_len * 0.05,
                               (self.location[0] - 1) * self.tile_len + self.tile_len * 0.2))
