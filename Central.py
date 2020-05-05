@@ -42,7 +42,7 @@ class Central:
         self.do_replan = True
 
     def do_step(self):
-        print('\nStep')
+        print(f'\nStep {self.current_time}')
         for a in self.cars:
             for b in self.cars:
                 if a == b:
@@ -53,19 +53,19 @@ class Central:
                     print(b)
                     input('.......')
 
-        for t in self.tasks:
-            print(t)
-        print()
+        #for t in self.tasks:
+        #    print(t)
+        #print()
         test_set = set()
         for c in self.cars:
-            print(c)
+            #print(c)
             if c.current_task is not None:
                 test_set.add(c.current_task)
         self.park_cars(only_in=True)
         self.unpark_cars()
-        self.do_replan = True
+
         if self.do_replan:
-            print('Replan')
+            #print('Replan')
             self.replan()
         # print('Move cars')
         self.park_cars()
@@ -85,7 +85,7 @@ class Central:
                     car.possible_task = task
                     task.assign(car, self.current_time)
                     self.map.map[car.y][car.x] = Task_Point()
-                    # self.do_replan = True
+                    self.do_replan = True
                 elif car_pos == task.end and car.current_task is not None and car.current_task.task_id == task.task_id:
                     car.current_task = None
                     car.possible_task = None
@@ -126,8 +126,8 @@ class Central:
         cbs = CBS(self.bitmap, free_agents_plans)
         self.routes = cbs.solve()
 
-        for agent, path in self.routes.items():
-            print(f'{agent}: {path}')
+        #for agent, path in self.routes.items():
+        #    print(f'{agent}: {path}')
         # input('waiting')
         # for id, route in routes.items():
         # for i in range(len(route)):
@@ -319,7 +319,7 @@ class CBS:
             # Node conflict
             if len(conflicts) > 0:
                 first_conflict = conflicts[0]
-                print(first_conflict)
+                #print(first_conflict)
 
                 # print('\n')
                 for a in first_conflict['agents']:
@@ -342,7 +342,7 @@ class CBS:
             # Edge conflict
             else:
                 first_conflict = edge_conflicts[0]
-                print(first_conflict)
+                #print(first_conflict)
 
                 # print('\n')
                 for a in first_conflict['agents']:
@@ -366,7 +366,7 @@ class CBS:
         # Map.print_map(None,self.map)
         # print('Init----')
         for agent in self.agents:
-            print(agent)
+            #print(agent)
             id = agent['id']
             orientation = agent['orientation']
             # print(f'Agent {id}:')
@@ -472,7 +472,7 @@ class CBS:
                         # print('EDGE CONFLICT!!!!!')
                         edge_conflict = {'agents': [agent, agent2], 'from': sol[i], 'to': sol[i + 1], 'time': i}
                         edge_conflicts.append(edge_conflict)
-                        # return conflicts, edge_conflicts
+                        #return conflicts, edge_conflicts
 
             for key, value in occupied.items():
                 if len(value) < 2:
@@ -481,22 +481,7 @@ class CBS:
                     for a2 in value:
                         if a1 == a2:
                             continue
-                        if all_orientations[a1][i] == ((all_orientations[a2][i] + 2) % 4):
-                            if not i + 2 > len(all_orientations[a1]) and not i + 2 > len(all_orientations[a2]):
 
-                                o1 = all_orientations[a1][i + 1] - all_orientations[a1][i]
-                                o2 = all_orientations[a2][i + 1] - all_orientations[a2][i]
-                                if (o2 == 0 and o1 == -1):
-                                    edge_conflict = {'agents': [a1], 'from': self.curr_node.solution[a1][i],
-                                                     'to': self.curr_node.solution[a1][i + 1],
-                                                     'time': i}
-                                    edge_conflicts.append(edge_conflict)
-                                elif (o1 == 0 and o2 == -1):
-                                    edge_conflict = {'agents': [a2], 'from': self.curr_node.solution[a2][i],
-                                                     'to': self.curr_node.solution[a2][i + 1],
-                                                     'time': i}
-                                    edge_conflicts.append(edge_conflict)
-                                continue
                         conflict = {'agents': [a1, a2], 'position': key, 'time': i}
                         if len(value) == 2 and not self.is_on_crossroads(key) and not all_orientations[a1][i] == \
                                                                                       all_orientations[a2][i]:
