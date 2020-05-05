@@ -4,10 +4,11 @@ from Car import *
 class ANode():
     """A node class for A* Pathfinding"""
 
-    def __init__(self, parent=None, position=None, orientation=None):
+    def __init__(self, parent=None, position=None, orientation=None, waiting=False):
         self.parent = parent
         self.position = position
         self.orientation = orientation
+        self.waiting = waiting
 
         self.g = 0
         self.h = 0
@@ -89,10 +90,10 @@ class Central:
                     car.current_task = None
                     car.possible_task = None
                     self.tasks[t].complete(self.current_time)
-                    self.do_replan = True
                     to_remove.append(t)
 
                     self.map.map[car.y][car.x] = Task_Point()
+                    self.do_replan = True
         for t in to_remove[::-1]:
             self.tasks.pop(t)
 
@@ -112,8 +113,8 @@ class Central:
             # print(f'Car {a.y} - {a.x}   Task {a.possible_task.start} -> {a.possible_task.end}  Current: {a.current_task is not None}')
             if a.current_task is None:
                 # print(f'Car {a.id}       {a.possible_task.task_id} -')
-                new_plan = {'id': a.id, 'orientation': a.orientation, 'start': (a.y, a.x), 'end': a.possible_task.start,
-                            'task_end': a.possible_task.end}
+                new_plan = {'id': a.id, 'orientation': a.orientation, 'start': (a.y, a.x), 'end': None,
+                            'task_end': a.possible_task.start}
                 free_agents_plans.append(new_plan)
             elif a.current_task is not None:
                 # print(f'Car {a.id}        {a.possible_task.task_id} {a.current_task.task_id}')
@@ -164,7 +165,8 @@ class Central:
             metrics[t] = []
             for a in free_agents:
                 route_len = CBS.heuristic((a.y, a.x), t.start)
-                metrics[t].append((a, route_len))
+                score = route_len - t.in_time
+                metrics[t].append((a, score))
 
             metrics[t].sort(key=lambda tup: tup[1])
 
@@ -550,8 +552,21 @@ class CBS:
             # Get the current node
             current_node = open_list[0]
             current_index = 0
+            open_list.sort(key=lambda x: x.f)
+            best_score = open_list[0].f
+            best_not_waiting_score = 0
             for index, item in enumerate(open_list):
-                if item.f < current_node.f:
+                if item.f > best_score:
+                    break
+                current = open_list[index]
+                not_waiting_score = 0
+                while current is not None:
+                    if current.waiting:
+                        break
+                    not_waiting_score += 1
+                    current = current.parent
+
+                if best_not_waiting_score < not_waiting_score:
                     current_node = open_list[index]
                     current_index = index
 
@@ -577,8 +592,8 @@ class CBS:
                 node_position = (current_node.position[0] + new_position[0], current_node.position[1] + new_position[1])
                 if new_position == directions[(current_node.orientation + 2) % 4]:
                     continue
-                if new_position == (0, 0) and self.is_on_crossroads(node_position):
-                    continue
+                # if new_position == (0, 0) and self.is_on_crossroads(node_position):
+                #    continue
 
                 # Make sure within range
                 if node_position[0] > (len(self.map) - 1) or node_position[0] < 0 or node_position[1] > (
@@ -607,7 +622,7 @@ class CBS:
                     new_orientation = (current_node.orientation - 1) % 4
                 elif new_position == directions[(current_node.orientation + 1) % 4]:
                     new_orientation = (current_node.orientation + 1) % 4
-                new_node = ANode(current_node, node_position, new_orientation)
+                new_node = ANode(current_node, node_position, new_orientation, new_position == (0, 0))
 
                 # Append
                 children.append(new_node)

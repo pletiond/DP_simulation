@@ -1,0 +1,6 @@
+task_id;start;end;in_time;assign_time;complete_time;car_id
+task_id;start;end;in_time;assign_time;complete_time;car_id
+task_id;start;end;in_time;assign_time;complete_time;car_id
+11;(1, 11);(1, 10);0;0;1;18
+33;(1, 12);(4, 8);0;2;11;19
+37;(13, 2);(9, 5);0;2;11;43

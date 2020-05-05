@@ -113,7 +113,8 @@ class TPTS:
                 continue
 
             distance = len(route)
-            options.append((distance, self.tasks[i], route, all_orientations, route2[0:-1] + route3,
+            score = distance - (self.tasks[i].in_time - self.current_time)
+            options.append((score, self.tasks[i], route, all_orientations, route2[0:-1] + route3,
                             all_orientations2[0:-1] + all_orientations3))
 
         options.sort(key=lambda x: x[0])
@@ -127,7 +128,8 @@ class TPTS:
             route, all_orientations = self.astar(car2.id, (car2.y, car2.x), task.start, car2.orientation)
             if route == False:
                 continue
-            if len(route) <= option[0]:
+            car_2_score = len(route) - (option[1].in_time - self.current_time)
+            if car_2_score <= option[0]:
                 option = None
                 continue
             car.possible_task = task
@@ -153,7 +155,6 @@ class TPTS:
             # self.go_to_parking(car)
             return False
 
-        shortest_dis = option[0]
         next_task = option[1]
         new_route = option[2][0:-1] + option[4]
         new_orientations = option[3][0:-1] + option[5]
@@ -162,7 +163,7 @@ class TPTS:
                 car.possible_task = None
                 return self.plan_route_for_car(car)
 
-        if shortest_dis == 1:
+        if (car.y, car.x) == next_task.start:
             car.current_task = next_task
             next_task.assign(car, self.current_time)
             self.map.map[car.y][car.x] = Task_Point()

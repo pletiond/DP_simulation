@@ -3,7 +3,7 @@ from ast import literal_eval as make_tuple
 
 class Task:
 
-    def __init__(self, start, end, map, time, out_file):
+    def __init__(self, start, end, map, time, out_file, is_VIP=False):
         self.map = map
         self.out_file = out_file
         self.task_id = self.map.task_id_max
@@ -15,6 +15,7 @@ class Task:
         self.in_time = time
         self.assign_time = None
         self.complete_time = None
+        self.is_VIP = is_VIP
 
     def assign(self, car, time):
         self.state = 'ASSIGNED'
@@ -26,10 +27,10 @@ class Task:
         self.complete_time = time
         with open(f'{self.out_file}.csv', 'a') as fp:
             fp.write(
-                f'{self.task_id};{self.start};{self.end};{int(self.in_time)};{int(self.assign_time)};{int(self.complete_time)};{self.car.id}\n')
+                f'{self.task_id};{self.start};{self.end};{int(self.in_time)};{int(self.assign_time)};{int(self.complete_time)};{self.car.id};{self.is_VIP}\n')
 
     def __str__(self):
-        return f'TID: {self.task_id} From: {self.start} To: {self.end}'
+        return f'TID: {self.task_id} From: {self.start} To: {self.end} VIP: {self.is_VIP}'
 
     def __repr__(self):
         return self.__str__()
@@ -111,7 +112,7 @@ class Spawn_Points:
         print(f'Total spawn points: {len(self.points)}')
 
         with open(f'{self.out_file}.csv', 'a') as fp:
-            fp.write(f'task_id;start;end;in_time;assign_time;complete_time;car_id\n')
+            fp.write(f'task_id;start;end;in_time;assign_time;complete_time;car_id;is_VIP\n')
 
     def add_spawn_point(self, location, spawn_rate, orientation):
         self.points.append((location, spawn_rate, orientation))
@@ -125,8 +126,8 @@ class Spawn_Points:
         start, end = self.get_random_free_points()
         if start == False:
             return
-
         new_task = Task(start, end, self.map, time, self.out_file)
+
         self.tasks.append(new_task)
 
     def get_random_free_points(self):
@@ -184,7 +185,7 @@ class Static_Points:
 
         self.load_tasks()
         with open(f'{self.out_file}.csv', 'a') as fp:
-            fp.write(f'task_id;start;end;in_time;assign_time;complete_time;car_id\n')
+            fp.write(f'task_id;start;end;in_time;assign_time;complete_time;car_id;is_VIP\n')
 
     def do_step(self, time):
         while len(self.future_tasks) and self.future_tasks[0][0] == time:

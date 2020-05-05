@@ -1,5 +1,5 @@
 import numpy as np
-from task import *
+from Task import *
 
 class Map:
 
