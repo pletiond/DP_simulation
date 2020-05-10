@@ -1,4 +1,5 @@
 from Car import *
+import copy
 
 
 class ANode():
@@ -33,7 +34,8 @@ class Central:
         self.bitmap = self.map.to_bitman_objects()
         self.car_points = car_points
         self.current_time = 0
-
+        self.moved = 0
+        self.number_of_astar = 0
         self.routes = {}
         for cp in car_points:
             l = cp.location
@@ -53,25 +55,27 @@ class Central:
                     print(b)
                     input('.......')
 
-        #for t in self.tasks:
+        # for t in self.tasks:
         #    print(t)
-        #print()
+        # print()
         test_set = set()
         for c in self.cars:
-            #print(c)
+            # print(c)
             if c.current_task is not None:
                 test_set.add(c.current_task)
         self.park_cars(only_in=True)
         self.unpark_cars()
 
         if self.do_replan:
-            #print('Replan')
+            # print('Replan')
             self.replan()
         # print('Move cars')
         self.park_cars()
         self.move_cars()
         self.check_tasks()
         self.current_time += 1
+        with open(f'tests/astar/LCPD10.csv', 'a') as fp:
+            fp.write(f'{self.number_of_astar}\n')
 
     def check_tasks(self):
         to_remove = []
@@ -107,26 +111,29 @@ class Central:
             if a.possible_task is None:
                 next = self.get_parking_location(a)
                 new_plan = {'id': a.id, 'orientation': a.orientation, 'start': (a.y, a.x), 'end': None,
-                            'task_end': next}
+                            'task_end': next, 'VIP': False}
                 free_agents_plans.append(new_plan)
                 continue
             # print(f'Car {a.y} - {a.x}   Task {a.possible_task.start} -> {a.possible_task.end}  Current: {a.current_task is not None}')
             if a.current_task is None:
                 # print(f'Car {a.id}       {a.possible_task.task_id} -')
                 new_plan = {'id': a.id, 'orientation': a.orientation, 'start': (a.y, a.x), 'end': None,
-                            'task_end': a.possible_task.start}
+                            'task_end': a.possible_task.start, 'VIP': a.possible_task.is_VIP}
                 free_agents_plans.append(new_plan)
             elif a.current_task is not None:
                 # print(f'Car {a.id}        {a.possible_task.task_id} {a.current_task.task_id}')
                 new_plan = {'id': a.id, 'orientation': a.orientation, 'start': (a.y, a.x), 'end': None,
-                            'task_end': a.current_task.end}
+                            'task_end': a.current_task.end, 'VIP': a.possible_task.is_VIP}
                 free_agents_plans.append(new_plan)
 
         # print(free_agents_plans)
         cbs = CBS(self.bitmap, free_agents_plans)
-        self.routes = cbs.solve()
+        self.routes, num_astar = cbs.solve()
+        self.number_of_astar += num_astar
+        if self.routes is None:
+            self.routes = cbs.solve(ignore_VIP=True)
 
-        #for agent, path in self.routes.items():
+        # for agent, path in self.routes.items():
         #    print(f'{agent}: {path}')
         # input('waiting')
         # for id, route in routes.items():
@@ -155,8 +162,8 @@ class Central:
     def assign_free_agents(self):
         free_agents = self.get_free_agents()
         free_tasks = self.get_free_tasks()
-        # print(f'Free tasks: {len(free_tasks)}')
-        # print(f'Free agents: {len(free_agents)}')
+
+        self.assign_VIP(free_agents, free_tasks)
 
         metrics = {}
 
@@ -165,7 +172,7 @@ class Central:
             metrics[t] = []
             for a in free_agents:
                 route_len = CBS.heuristic((a.y, a.x), t.start)
-                score = route_len - t.in_time
+                score = route_len - (self.current_time - t.in_time)
                 metrics[t].append((a, score))
 
             metrics[t].sort(key=lambda tup: tup[1])
@@ -208,6 +215,35 @@ class Central:
                             key.current_task = value
                             value.assign(key, self.current_time)
 
+    def assign_VIP(self, free_agents, free_tasks):
+        to_remove = []
+        for t, task in enumerate(copy.deepcopy(free_tasks), start=0):
+            print(f'{t}   {task}')
+            if not task.is_VIP:
+                continue
+            nearest_car_index = None
+            shortest_dist = None
+            for c, car in enumerate(free_agents.copy(), start=0):
+                route_len = CBS.heuristic((car.y, car.x), task.start)
+                if shortest_dist is None or route_len < shortest_dist:
+                    shortest_dist = route_len
+                    nearest_car_index = c
+            if nearest_car_index is None:
+                continue
+            free_agents[nearest_car_index].possible_task = task
+            if shortest_dist == 0:
+                free_agents[nearest_car_index].current_task = free_tasks[t]
+                free_tasks[t].assign(free_agents[nearest_car_index], self.current_time)
+            print(f'VIP Task {task} has {free_agents[nearest_car_index]}')
+            # free_tasks.remove(task)
+            to_remove.append(t)
+            free_agents.remove(free_agents[nearest_car_index])
+        for t in to_remove[::-1]:
+            free_tasks.pop(t)
+        print(free_agents)
+        print(free_tasks)
+        print('------')
+
     def get_free_agents(self):
         free_agents = []
         for a in range(len(self.cars)):
@@ -231,6 +267,7 @@ class Central:
         # curr_state = self.time_plans[self.current_time]
 
         for i in range(len(self.cars)):
+            self.moved += 1
             route = self.routes[self.cars[i].id]
             if len(route) == 1:
                 self.cars[i].wait()
@@ -269,6 +306,7 @@ class Central:
             if res == False:
                 print('ERROR CANT MOVE!!!---')
             route.pop(0)
+        print(self.moved)
 
     def park_cars(self, only_in=False):
         for cp in range(len(self.car_points)):
@@ -289,11 +327,11 @@ class CBS:
     def __init__(self, map, agents):
         self.map = map
         self.agents = agents
-
+        self.number_of_astar = 0
         self.current_time = 0
         self.curr_node = None
 
-    def solve(self):
+    def solve(self, ignore_VIP=False):
         # print('CBS solve')
         self.OPEN = []
         root = Node()
@@ -310,16 +348,18 @@ class CBS:
             self.curr_node = self.get_best_node()  # lowest solution cost
             # print(f'Cost: {self.curr_node.cost}')
             conflicts, edge_conflicts = self.validate_solution()
+            if not ignore_VIP:
+                self.validate_VIP(conflicts, edge_conflicts)
 
             if len(conflicts) == 0 and len(edge_conflicts) == 0:
                 for a, sol in self.curr_node.solution.items():
                     if sol is None:
                         input('empty sol!!!!')
-                return self.curr_node.solution  # goal
+                return self.curr_node.solution, self.number_of_astar  # goal
             # Node conflict
             if len(conflicts) > 0:
                 first_conflict = conflicts[0]
-                #print(first_conflict)
+                # print(first_conflict)
 
                 # print('\n')
                 for a in first_conflict['agents']:
@@ -342,7 +382,7 @@ class CBS:
             # Edge conflict
             else:
                 first_conflict = edge_conflicts[0]
-                #print(first_conflict)
+                # print(first_conflict)
 
                 # print('\n')
                 for a in first_conflict['agents']:
@@ -366,7 +406,7 @@ class CBS:
         # Map.print_map(None,self.map)
         # print('Init----')
         for agent in self.agents:
-            #print(agent)
+            # print(agent)
             id = agent['id']
             orientation = agent['orientation']
             # print(f'Agent {id}:')
@@ -472,7 +512,7 @@ class CBS:
                         # print('EDGE CONFLICT!!!!!')
                         edge_conflict = {'agents': [agent, agent2], 'from': sol[i], 'to': sol[i + 1], 'time': i}
                         edge_conflicts.append(edge_conflict)
-                        #return conflicts, edge_conflicts
+                        # return conflicts, edge_conflicts
 
             for key, value in occupied.items():
                 if len(value) < 2:
@@ -493,6 +533,29 @@ class CBS:
 
         # print(conflicts)
         return conflicts, edge_conflicts
+
+    def validate_VIP(self, conflicts, edge_conflicts):
+        if len(conflicts) > 0:
+            agents_id = conflicts[0]['agents']
+            agent1 = None
+            agent2 = None
+            for a in self.agents:
+                if a['id'] == agents_id[0]:
+                    agent1 = a['VIP']
+                if a['id'] == agents_id[1]:
+                    agent2 = a['VIP']
+            if agent1 and not agent2:
+                print(agents_id)
+                conflicts[0]['agents'].pop(0)
+                print(conflicts)
+
+            elif not agent1 and agent2:
+                print(agents_id)
+                conflicts[0]['agents'].pop(1)
+                print(conflicts)
+
+        elif len(edge_conflicts) > 0:
+            ...
 
     @staticmethod
     def heuristic(a, b):
@@ -518,6 +581,7 @@ class CBS:
 
         # Create start and end node
         # print(f'Agent {agent_id} - a star')
+        self.number_of_astar += 1
         start_node = ANode(None, start)
         start_node.g = start_node.h = start_node.f = 0
         start_node.orientation = orientation

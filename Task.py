@@ -126,8 +126,11 @@ class Spawn_Points:
         start, end = self.get_random_free_points()
         if start == False:
             return
+        # if time > 5 and time % 5 == 0:
+        #    new_task = Task(start, end, self.map, time, self.out_file, is_VIP= True)
+        # else:
+        #    new_task = Task(start, end, self.map, time, self.out_file)
         new_task = Task(start, end, self.map, time, self.out_file)
-
         self.tasks.append(new_task)
 
     def get_random_free_points(self):

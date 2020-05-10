@@ -156,3 +156,11 @@ class Visualization:
 
             # pygame.display.update()
             self.clock.tick(self.ticks)
+            if steps // self.ticks >= 400:
+                break
+            # elif steps // self.ticks >= 600:
+            #    self.task_points.max_tasks = 20
+            # elif steps // self.ticks >= 300:
+            #    self.task_points.max_tasks = 40
+            # elif steps // self.ticks >= 0:
+            #    self.task_points.max_tasks = 20

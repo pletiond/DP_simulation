@@ -18,6 +18,8 @@ class TP:
         for i in range(10000):
             self.time_plans.append(copy.deepcopy(self.objects_map))
         self.current_time = 0
+        self.moved = 0
+        self.number_of_astar = 0
         self.car_points = car_points
         for cp in car_points:
             l = cp.location
@@ -50,6 +52,9 @@ class TP:
         self.move_cars()
         self.check_tasks()
         self.current_time += 1
+
+        with open(f'tests/astar/TP20.csv', 'a') as fp:
+            fp.write(f'{self.number_of_astar}\n')
 
     def plan_VIP(self):
         self.VIP_cars = []
@@ -217,7 +222,7 @@ class TP:
             route = route[0:-1] + route2[0:-1] + route3
             all_orientations = all_orientations[0:-1] + all_orientations2[0:-1] + all_orientations3
             distance = len(route)
-            score = distance - (self.tasks[i].in_time - self.current_time)
+            score = distance - (self.current_time - self.tasks[i].in_time)
 
             if next_task is None or lowest_score > score:
                 next_task = self.tasks[i]
@@ -291,7 +296,7 @@ class TP:
             car = self.cars[i]
             print(car)
             res = None
-
+            self.moved += 1
             if car.id in [x[0] for x in next_state[car.y][car.x]]:
                 print(f'Car {car.id} WAIT')
                 car.wait()
@@ -315,6 +320,7 @@ class TP:
                 car.wait()
             if res == False:
                 print('ERROR CANT MOVE!!!---')
+        print(self.moved)
 
     def check_possible_task(self, task):
         for car in self.cars:
@@ -328,6 +334,7 @@ class TP:
         return np.sqrt((b[0] - a[0]) ** 2 + (b[1] - a[1]) ** 2)
 
     def astar(self, agent_id, start, end, orientation, offset=0):
+        self.number_of_astar += 1
         start_node = ANode(None, start)
         start_node.g = start_node.h = start_node.f = 0
         start_node.orientation = orientation
@@ -413,6 +420,8 @@ class TP:
             for child in children:
                 # Create the f, g, and h values
                 child.g = current_node.g + 1
+                if child.g > 500:
+                    continue
                 child.h = ((child.position[0] - end_node.position[0]) ** 2) + (
                         (child.position[1] - end_node.position[1]) ** 2)
                 child.f = child.g + child.h
@@ -441,6 +450,7 @@ class TP:
         return False, False
 
     def VIP_astar(self, agent_id, start, end, orientation, offset=0):
+        self.number_of_astar += 1
         start_node = ANode(None, start)
         start_node.g = start_node.h = start_node.f = 0
         start_node.orientation = orientation
@@ -529,6 +539,8 @@ class TP:
             for child in children:
                 # Create the f, g, and h values
                 child.g = current_node.g + 1
+                if child.g > 500:
+                    continue
                 child.h = ((child.position[0] - end_node.position[0]) ** 2) + (
                         (child.position[1] - end_node.position[1]) ** 2)
                 child.f = child.g + child.h
