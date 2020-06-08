@@ -1,7 +1,7 @@
 # Centralized Planning of Autonomous Traffic - simulation
 
 ## Requirements
-* Python 3.6
+* Python >= 3.6
 * numpy
 * pygame
 
