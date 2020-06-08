@@ -42,7 +42,6 @@ class TPTS:
         self.plan_VIP()
         for i in range(len(self.cars)):
             if self.cars[i].possible_task is None:
-                # self.delete_future_plans(self.cars[i])
                 self.plan_route_for_car(self.cars[i])
         self.try_to_add_car()
         self.park_cars()
@@ -145,7 +144,6 @@ class TPTS:
                 continue
             break
         if option is None:
-            # self.go_to_parking(car)
             return False
 
         next_task = option[1]
@@ -284,7 +282,6 @@ class TPTS:
         return None
 
     def go_to_parking(self, car):
-        # print(f'Car {car.id} goes to parking location')
         best_loc = None
         min_len = None
         loc = (car.y, car.x)
@@ -375,10 +372,8 @@ class TPTS:
 
         open_list.append(start_node)
 
-        # Loop until you find the end
         while len(open_list) > 0:
 
-            # Get the current node
             current_node = open_list[0]
             current_index = 0
             for index, item in enumerate(open_list):
@@ -386,11 +381,9 @@ class TPTS:
                     current_node = open_list[index]
                     current_index = index
 
-            # Pop current off open list, add to closed list
             open_list.pop(current_index)
             closed_list.append(current_node)
 
-            # Found the goal
             if current_node == end_node:
                 path = []
                 all_orientations = []
@@ -400,9 +393,8 @@ class TPTS:
                     all_orientations.append(current.orientation)
                     current = current.parent
 
-                return path[::-1], all_orientations[::-1]  # Return reversed path
+                return path[::-1], all_orientations[::-1]
 
-            # Generate children
             children = []
             directions = [(0, -1), (-1, 0), (0, 1), (1, 0)]
             for new_position in directions + [(0, 0)]:
@@ -410,7 +402,6 @@ class TPTS:
                 if new_position == directions[(current_node.orientation + 2) % 4]:
                     continue
 
-                # Make sure within range
                 if node_position[0] > (len(self.bitmap) - 1) or node_position[0] < 0 or node_position[1] > (
                         len(self.bitmap[len(self.bitmap) - 1]) - 1) or node_position[1] < 0:
                     continue
@@ -437,23 +428,18 @@ class TPTS:
                                                                                                     new_orientation):
                     continue
 
-                # Create new node
-
                 new_node = ANode(current_node, node_position, new_orientation)
 
-                # Append
                 children.append(new_node)
 
-            # Loop through children
             for child in children:
-                # Create the f, g, and h values
                 child.g = current_node.g + 1
                 if child.g > 500:
                     continue
                 child.h = ((child.position[0] - end_node.position[0]) ** 2) + (
                         (child.position[1] - end_node.position[1]) ** 2)
                 child.f = child.g + child.h
-                # Child is on the closed list
+
                 skip = False
                 for closed_child in closed_list:
                     if child == closed_child and closed_child.f == child.f and child.orientation == closed_child.orientation:
@@ -462,7 +448,6 @@ class TPTS:
                 if skip:
                     continue
 
-                # Child is already in the open list
                 skip = False
                 for open_node in open_list:
                     if child == open_node and child.f >= open_node.f and child.orientation == open_node.orientation:
@@ -472,7 +457,6 @@ class TPTS:
                 if skip:
                     continue
 
-                # Add the child to the open list
                 open_list.append(child)
 
         return False, False
@@ -490,10 +474,8 @@ class TPTS:
 
         open_list.append(start_node)
 
-        # Loop until you find the end
         while len(open_list) > 0:
 
-            # Get the current node
             current_node = open_list[0]
             current_index = 0
             for index, item in enumerate(open_list):
@@ -501,11 +483,9 @@ class TPTS:
                     current_node = open_list[index]
                     current_index = index
 
-            # Pop current off open list, add to closed list
             open_list.pop(current_index)
             closed_list.append(current_node)
 
-            # Found the goal
             if current_node == end_node:
                 path = []
                 blocking_agent = []
@@ -520,7 +500,6 @@ class TPTS:
                     input('---')
                 return path[::-1], all_orientations[::-1], blocking_agent  # Return reversed path
 
-            # Generate children
             children = []
             directions = [(0, -1), (-1, 0), (0, 1), (1, 0)]
             for new_position in directions + [(0, 0)]:
@@ -528,7 +507,6 @@ class TPTS:
                 if new_position == directions[(current_node.orientation + 2) % 4]:
                     continue
 
-                # Make sure within range
                 if node_position[0] > (len(self.bitmap) - 1) or node_position[0] < 0 or node_position[1] > (
                         len(self.bitmap[len(self.bitmap) - 1]) - 1) or node_position[1] < 0:
                     continue
@@ -556,23 +534,18 @@ class TPTS:
                 if res == False:
                     continue
 
-                # Create new node
-
                 new_node = ANode(current_node, node_position, new_orientation)
                 new_node.blocking_agent = res
-                # Append
                 children.append(new_node)
 
-            # Loop through children
             for child in children:
-                # Create the f, g, and h values
                 child.g = current_node.g + 1
                 if child.g > 500:
                     continue
                 child.h = ((child.position[0] - end_node.position[0]) ** 2) + (
                         (child.position[1] - end_node.position[1]) ** 2)
                 child.f = child.g + child.h
-                # Child is on the closed list
+
                 skip = False
                 for closed_child in closed_list:
                     if child == closed_child and closed_child.f == child.f and child.orientation == closed_child.orientation:
@@ -581,7 +554,6 @@ class TPTS:
                 if skip:
                     continue
 
-                # Child is already in the open list
                 skip = False
                 for open_node in open_list:
                     if child == open_node and child.f >= open_node.f and child.orientation == open_node.orientation:
@@ -591,7 +563,6 @@ class TPTS:
                 if skip:
                     continue
 
-                # Add the child to the open list
                 open_list.append(child)
 
         return False, False, False
@@ -647,7 +618,6 @@ class TPTS:
 
 
 class ANode():
-    """A node class for A* Pathfinding"""
 
     def __init__(self, parent=None, position=None, orientation=None):
         self.parent = parent
@@ -662,5 +632,3 @@ class ANode():
 
     def __eq__(self, other):
         return self.position == other.position
-
-# [(7, 6), (7, 5), (6, 5), (5, 5), (4, 5), (4, 4), (4, 3), (4, 2), (4, 1), (5, 1), (6, 1), (7, 1), (7, 2), (7, 3), (7, 4), (7, 5), (7, 6), (7, 7), (7, 8), (7, 9), (7, 10), (7, 11), (7, 12), (7, 13), (6, 13), (5, 13), (4, 13), (4, 12), (4, 11), (4, 10), (4, 9), (5, 9), (6, 9), (7, 9), (7, 10), (7, 11), (8, 11)]

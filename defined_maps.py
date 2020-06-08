@@ -35,7 +35,7 @@ def get_scenario1(tile_len, speed):
     tp = TP(cars, map, tasks, cars_points)
     tpts = TPTS(cars, map, tasks, cars_points)
 
-    solver = lcpd
+    solver = tpts
     max_tasks = max_cars
 
     # Tasks-------------
