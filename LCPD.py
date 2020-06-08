@@ -1,10 +1,10 @@
 from Car import *
 import copy
+from Parking import *
+from Task import *
 
 
 class ANode():
-    """A node class for A* Pathfinding"""
-
     def __init__(self, parent=None, position=None, orientation=None, waiting=False):
         self.parent = parent
         self.position = position
@@ -25,7 +25,7 @@ class ANode():
         return self.__str__()
 
 
-class Central:
+class LCPD:
 
     def __init__(self, cars, map, tasks, car_points):
         self.map = map
@@ -35,6 +35,8 @@ class Central:
         self.car_points = car_points
         self.current_time = 0
         self.moved = 0
+        # self.parking = Probabilistic_Parking(car_points)
+        self.parking = Dummy_Parking(car_points)
         self.number_of_astar = 0
         self.routes = {}
         for cp in car_points:
@@ -42,6 +44,7 @@ class Central:
             self.bitmap[l[0]][l[1]] = 0
 
         self.do_replan = True
+        self.tasks_time = []
 
     def do_step(self):
         print(f'\nStep {self.current_time}')
@@ -74,8 +77,6 @@ class Central:
         self.move_cars()
         self.check_tasks()
         self.current_time += 1
-        with open(f'tests/astar/LCPD10.csv', 'a') as fp:
-            fp.write(f'{self.number_of_astar}\n')
 
     def check_tasks(self):
         to_remove = []
@@ -90,11 +91,14 @@ class Central:
                     task.assign(car, self.current_time)
                     self.map.map[car.y][car.x] = Task_Point()
                     self.do_replan = True
+                    self.parking.add_location(task.start)
                 elif car_pos == task.end and car.current_task is not None and car.current_task.task_id == task.task_id:
                     car.current_task = None
                     car.possible_task = None
                     self.tasks[t].complete(self.current_time)
                     to_remove.append(t)
+                    time = self.tasks[t].assign_time - self.tasks[t].in_time
+                    self.tasks_time.append(time)
 
                     self.map.map[car.y][car.x] = Task_Point()
                     self.do_replan = True
@@ -109,7 +113,7 @@ class Central:
         for a in self.cars:
 
             if a.possible_task is None:
-                next = self.get_parking_location(a)
+                next = self.parking.where_to_park((a.y, a.x))
                 new_plan = {'id': a.id, 'orientation': a.orientation, 'start': (a.y, a.x), 'end': None,
                             'task_end': next, 'VIP': False}
                 free_agents_plans.append(new_plan)
@@ -149,15 +153,6 @@ class Central:
             # self.time_plans[self.current_time + 1][a.y][a.x] = a.id
         self.do_replan = False
 
-    def get_parking_location(self, agent):
-        best_loc = None
-        min_len = None
-        loc = (agent.y, agent.x)
-        for cp in self.car_points:
-            if best_loc is None or CBS.heuristic(loc, cp.location) < min_len:
-                min_len = CBS.heuristic(loc, cp.location)
-                best_loc = cp.location
-        return best_loc
 
     def assign_free_agents(self):
         free_agents = self.get_free_agents()
@@ -218,7 +213,7 @@ class Central:
     def assign_VIP(self, free_agents, free_tasks):
         to_remove = []
         for t, task in enumerate(copy.deepcopy(free_tasks), start=0):
-            print(f'{t}   {task}')
+            #print(f'{t}   {task}')
             if not task.is_VIP:
                 continue
             nearest_car_index = None
@@ -240,9 +235,9 @@ class Central:
             free_agents.remove(free_agents[nearest_car_index])
         for t in to_remove[::-1]:
             free_tasks.pop(t)
-        print(free_agents)
-        print(free_tasks)
-        print('------')
+        # print(free_agents)
+        # print(free_tasks)
+        #print('------')
 
     def get_free_agents(self):
         free_agents = []
@@ -306,7 +301,7 @@ class Central:
             if res == False:
                 print('ERROR CANT MOVE!!!---')
             route.pop(0)
-        print(self.moved)
+
 
     def park_cars(self, only_in=False):
         for cp in range(len(self.car_points)):

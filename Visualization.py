@@ -33,8 +33,6 @@ class Visualization:
         for cp in cars_points:
             loc = cp.location
             self.map[loc[0] - 1][loc[1] - 1] = 0
-        for i in self.map:
-            print(i)
 
         self.solver = solver
         self.task_points = spawn_points
@@ -66,7 +64,6 @@ class Visualization:
                 vis_row.append(tile)
 
             self.vis_map.append(vis_row)
-
 
     def encode_tile(self, row, column):
         code = ''
@@ -113,6 +110,7 @@ class Visualization:
         pygame.display.flip()
         self.clock.tick(self.ticks)
         auto = False
+        print('\nPress the UP arrow for a smooth simulation\nOR\nPress the RIGHT arrow to move one step')
         while True:
 
             if steps % self.ticks == 0:
@@ -156,11 +154,3 @@ class Visualization:
 
             # pygame.display.update()
             self.clock.tick(self.ticks)
-            if steps // self.ticks >= 400:
-                break
-            # elif steps // self.ticks >= 600:
-            #    self.task_points.max_tasks = 20
-            # elif steps // self.ticks >= 300:
-            #    self.task_points.max_tasks = 40
-            # elif steps // self.ticks >= 0:
-            #    self.task_points.max_tasks = 20

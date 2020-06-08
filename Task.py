@@ -48,7 +48,7 @@ class Task_Start:
         if car is None:
             return True
         if car.current_task is None:
-            print("ASSIGN--------")
+            # print("ASSIGN--------")
             car.current_task = self.parent
             self.parent.assign(car)
             car.turn_round()
@@ -109,7 +109,8 @@ class Spawn_Points:
             for col in range(len(bitmap[row])):
                 if bitmap[row][col] == 0 and not self.is_on_crossroads(bitmap, (row, col)):
                     self.add_spawn_point((row, col), 1, '')
-        print(f'Total spawn points: {len(self.points)}')
+
+        # print(f'Total spawn points: {len(self.points)}')
 
         with open(f'{self.out_file}.csv', 'a') as fp:
             fp.write(f'task_id;start;end;in_time;assign_time;complete_time;car_id;is_VIP\n')
@@ -119,6 +120,18 @@ class Spawn_Points:
         # self.map.map[location[0]][location[1]] = Task_Point()
 
     def do_step(self, time):
+        # if len(self.tasks):
+        #    print(f'Longest: {time - self.tasks[0].in_time}')
+        #    if time - self.tasks[0].in_time >= 50:
+        #        print(time)
+        #        print('END')
+        #        exit(0)
+
+        # if time % 5 == 0:
+        #    for _ in range(time//100 +1):
+        #        self.create_task(time)
+        # print(f'Tasks: {len(self.tasks)}')
+
         while len(self.tasks) < self.max_tasks:
             self.create_task(time)
 
@@ -134,24 +147,21 @@ class Spawn_Points:
         self.tasks.append(new_task)
 
     def get_random_free_points(self):
-        free = []
+        free_starts = []
+        free_ends = []
         for point in self.points:
-            skip = False
-            for t in self.tasks:
-                if t.start == point[0] or t.end == point[0]:
-                    skip = True
-                    break
 
-            if skip:
-                continue
-            free.append(point)
-        if len(free) < 2:
+            free_ends.append(point)
+            for i in range(point[1]):
+                free_starts.append(point)
+        if len(free_ends) < 2:
             return False, False
 
-        start = random.choice(free)
-        free.remove(start)
-        end = random.choice(free)
-
+        start = random.choice(free_starts)
+        end = random.choice(free_ends)
+        while start == end:
+            free_ends.remove(start)
+            end = random.choice(free_ends)
         return start[0], end[0]
 
     def refresh_spawn_points(self):
@@ -191,6 +201,14 @@ class Static_Points:
             fp.write(f'task_id;start;end;in_time;assign_time;complete_time;car_id;is_VIP\n')
 
     def do_step(self, time):
+        print(f'Tasks: {len(self.tasks)}')
+        if len(self.tasks):
+            print(f'Longest: {time - self.tasks[0].in_time}')
+            if time - self.tasks[0].in_time >= 50:
+                print(time)
+                print('END')
+                exit(0)
+
         while len(self.future_tasks) and self.future_tasks[0][0] == time:
             t = self.future_tasks.pop(0)
             new_task = Task(t[1], t[2], self.map, time, self.out_file)

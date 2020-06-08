@@ -1,6 +1,7 @@
 from map import *
 import copy
 from Car import *
+from Parking import *
 
 
 class TP:
@@ -21,6 +22,8 @@ class TP:
         self.moved = 0
         self.number_of_astar = 0
         self.car_points = car_points
+        # self.parking = Probabilistic_Parking(car_points)
+        self.parking = Dummy_Parking(car_points)
         for cp in car_points:
             l = cp.location
             self.bitmap[l[0]][l[1]] = 0
@@ -53,9 +56,6 @@ class TP:
         self.check_tasks()
         self.current_time += 1
 
-        with open(f'tests/astar/TP20.csv', 'a') as fp:
-            fp.write(f'{self.number_of_astar}\n')
-
     def plan_VIP(self):
         self.VIP_cars = []
         for car in self.cars:
@@ -84,13 +84,7 @@ class TP:
                     if route2 == False:
                         continue
 
-                    best_loc = None
-                    min_len = None
-                    loc = task.end
-                    for cp in self.car_points:
-                        if best_loc is None or self.heuristic(loc, cp.location) < min_len:
-                            min_len = self.heuristic(loc, cp.location)
-                            best_loc = cp.location
+                    best_loc = self.parking.where_to_park(task.end)
 
                     route3, all_orientations3 = self.astar(car.id, task.end, best_loc, all_orientations2[-1],
                                                            offset=len(route) + len(route2) - 2)
@@ -108,14 +102,15 @@ class TP:
             for i in range(len(free_cars)):
                 next = False
                 best = free_cars[i]
-                print('---!')
-                print(best[1])
-                print(task)
+                # print('---!')
+                # print(best[1])
+                # print(task)
 
                 best[1].possible_task = task
                 if (best[1].y, best[1].x) == task.start:
                     best[1].current_task = task
                     task.assign(best[1], self.current_time)
+                    self.parking.add_location(task.start)
                     self.map.map[best[1].y][best[1].x] = Task_Point()
                 self.delete_future_plans(best[1])
                 self.reserve_route(best[1], best[2], best[3])
@@ -133,11 +128,6 @@ class TP:
                         res = self.plan_route_to_delivery(car2)
                     if not res:
                         next = True
-                        print(best[1])
-                        print(task)
-                        print(best[0])
-                        print(car2)
-
                         self.delete_future_plans(best[1])
                         best[1].possible_task = None
                         best[1].current_task = None
@@ -146,8 +136,6 @@ class TP:
                             res = self.plan_route_for_car(car2)
                         else:
                             res = self.plan_route_to_delivery(car2)
-                        print(res)
-                        # input('??')
                         break
                 if not next:
                     return
@@ -177,6 +165,7 @@ class TP:
                     car.possible_task = task
                     task.assign(car, self.current_time)
                     self.map.map[car.y][car.x] = Task_Point()
+                    self.parking.add_location(task.start)
                 elif car_pos == task.end and car.current_task == task:
                     car.current_task = None
                     car.possible_task = None
@@ -188,7 +177,7 @@ class TP:
             r = self.tasks.pop(t)
 
     def plan_route_for_car(self, car):
-        print(f'Planning route to start for car  {car.id}')
+        # print(f'Planning route to start for car  {car.id}')
 
         next_task = None
         lowest_score = None
@@ -207,13 +196,7 @@ class TP:
             if route2 == False:
                 continue
 
-            best_loc = None
-            min_len = None
-            loc = self.tasks[i].end
-            for cp in self.car_points:
-                if best_loc is None or self.heuristic(loc, cp.location) < min_len:
-                    min_len = self.heuristic(loc, cp.location)
-                    best_loc = cp.location
+            best_loc = self.parking.where_to_park(self.tasks[i].end)
 
             route3, all_orientations3 = self.astar(car.id, self.tasks[i].end, best_loc, all_orientations2[-1],
                                                    offset=len(route) + len(route2) - 2)
@@ -231,15 +214,12 @@ class TP:
                 new_orientations = all_orientations
         if next_task is None:
             return False
-        print(car)
-        print(next_task)
-        print('Route:')
-        print(new_route)
-        print('-')
+
         car.possible_task = next_task
         if (car.y, car.x) == next_task.start:
             car.current_task = next_task
             next_task.assign(car, self.current_time)
+            self.parking.add_location(next_task.start)
             self.map.map[car.y][car.x] = Task_Point()
         self.delete_future_plans(car)
         self.reserve_route(car, new_route, new_orientations)
@@ -252,13 +232,7 @@ class TP:
         if route2 == False:
             return False
 
-        best_loc = None
-        min_len = None
-        loc = task.end
-        for cp in self.car_points:
-            if best_loc is None or self.heuristic(loc, cp.location) < min_len:
-                min_len = self.heuristic(loc, cp.location)
-                best_loc = cp.location
+        best_loc = self.parking.where_to_park(task.end)
 
         route3, all_orientations3 = self.astar(car.id, task.end, best_loc, all_orientations2[-1],
                                                offset=len(route2) - 1)
@@ -294,25 +268,25 @@ class TP:
 
         for i in range(len(self.cars)):
             car = self.cars[i]
-            print(car)
+            # print(car)
             res = None
             self.moved += 1
             if car.id in [x[0] for x in next_state[car.y][car.x]]:
-                print(f'Car {car.id} WAIT')
+                # print(f'Car {car.id} WAIT')
                 car.wait()
 
             elif car.id in [x[0] for x in next_state[car.y][car.x + 1]]:
                 res = car.go_right()
-                print(f'Car {car.id} RIGHT')
+                # print(f'Car {car.id} RIGHT')
             elif car.id in [x[0] for x in next_state[car.y][car.x - 1]]:
                 res = car.go_left()
-                print(f'Car {car.id} LEFT')
+                # print(f'Car {car.id} LEFT')
             elif car.id in [x[0] for x in next_state[car.y + 1][car.x]]:
                 res = car.go_down()
-                print(f'Car {car.id} DOWN')
+                # print(f'Car {car.id} DOWN')
             elif car.id in [x[0] for x in next_state[car.y - 1][car.x]]:
                 res = car.go_up()
-                print(f'Car {car.id} UP')
+                # print(f'Car {car.id} UP')
             else:
                 print('MOVE CARS ERRORR!!!')
                 print(car)
@@ -320,7 +294,7 @@ class TP:
                 car.wait()
             if res == False:
                 print('ERROR CANT MOVE!!!---')
-        print(self.moved)
+        # print(self.moved)
 
     def check_possible_task(self, task):
         for car in self.cars:

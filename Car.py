@@ -1,4 +1,3 @@
-from map import *
 import math
 import pygame
 
@@ -188,12 +187,12 @@ class Car:
         self.orientation = (self.orientation - 1) % 4
         self.steps_to_goal.append((self.tile_len / self.speed, 40))
         for i in range(self.speed // 2):
-            self.steps_to_goal.append((self.tile_len * 0.6 / (self.speed // 2), 0))
+            self.steps_to_goal.append((self.tile_len * 0.5 / (self.speed // 2), 0))
 
         self.steps_to_goal.append((0, 50))
         remain = self.speed - 1 - self.speed // 2
         for i in range(remain):
-            self.steps_to_goal.append((self.tile_len * 0.52 / remain, 0))
+            self.steps_to_goal.append((self.tile_len * 0.55 / remain, 0))
 
     def go_right_vis(self):
         self.steps_to_goal = []
@@ -201,12 +200,12 @@ class Car:
         self.orientation = (self.orientation + 1) % 4
         self.steps_to_goal.append((self.tile_len / self.speed, -50))
         for i in range(self.speed // 2):
-            self.steps_to_goal.append((self.tile_len * 0.19 / (self.speed // 2), 0))
+            self.steps_to_goal.append((self.tile_len * 0.13 / (self.speed // 2), 0))
 
         self.steps_to_goal.append((0, -40))
         remain = self.speed - 1 - self.speed // 2
         for i in range(remain):
-            self.steps_to_goal.append((self.tile_len * 0.38 / remain, 0))
+            self.steps_to_goal.append((self.tile_len * 0.45 / remain, 0))
 
     def correct_position(self):
         x = self.x - 1  # int(self.pos[0] // self.tile_len)
@@ -225,7 +224,6 @@ class Car:
             x_plus = 0.33
             y_plus = 0.2
         self.pos = [x * self.tile_len + x_plus * self.tile_len, y * self.tile_len + y_plus * self.tile_len]
-
 
     def __str__(self):
         return f'CID: {self.id}, pos: {self.y} {self.x}, o: {self.orientation}, pos_task: {self.possible_task} curr_task: {self.current_task}'
@@ -246,6 +244,7 @@ class Car_Point:
         self.bitmap = self.map.to_bitman_objects()
         self.color = (0, 0, 0)  # black
         self.free_cars = []
+        self.score = 0
 
         if self.bitmap[location[0] - 1][location[1]] == 0:
             self.orientation = 'UP'

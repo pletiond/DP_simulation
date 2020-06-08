@@ -2,7 +2,6 @@ from map import *
 import copy
 from Car import *
 
-
 class TPTS:
 
     def __init__(self, cars, map, tasks, car_points):
@@ -32,12 +31,12 @@ class TPTS:
         print(f'\n\nTime: {self.current_time}')
         self.park_cars(only_in=True)
 
-        # for t in self.tasks:
-        #    print(t)
-        # print()
+        for t in self.tasks:
+            print(t)
+        print()
         test_set = set()
         for c in self.cars:
-            # print(c)
+            print(c)
             if c.possible_task is not None:
                 test_set.add(c.possible_task)
         self.plan_VIP()
@@ -50,8 +49,7 @@ class TPTS:
         self.move_cars()
         self.check_tasks()
         self.current_time += 1
-        with open(f'tests/astar/TPTS10.csv', 'a') as fp:
-            fp.write(f'{self.number_of_astar}\n')
+
 
     def try_to_add_car(self):
         for cp in range(len(self.car_points)):
@@ -59,6 +57,8 @@ class TPTS:
                 continue
 
             new_car = self.car_points[cp].unpark_car()
+            if not new_car:
+                continue
 
             res = self.plan_route_for_car(new_car)
             if not res:
@@ -80,7 +80,6 @@ class TPTS:
                     car.current_task = None
                     car.possible_task = None
                     task.complete(self.current_time)
-                    #print(f'Task {task} completed by {car}')
                     to_remove.append(t)
 
                     self.map.map[car.y][car.x] = Task_Point()
@@ -88,7 +87,6 @@ class TPTS:
             r = self.tasks.pop(t)
 
     def plan_route_for_car(self, car):
-        #print(f'Planning route to start for car  {car.id}')
 
         options = []
         for i in range(len(self.tasks)):
@@ -138,21 +136,12 @@ class TPTS:
                 continue
             car.possible_task = task
             car2.possible_task = None
-            for c in self.cars:
-                if c.possible_task is not None and c.possible_task == task and not c == car:
-                    print(c)
-                    input('same task1')
 
-            #print('Replanning!!!')
             if not self.plan_route_for_car(car2):
                 if car.possible_task == task:
                     car2.possible_task = task
                     car.possible_task = None
                     option = None
-                    for c in self.cars:
-                        if c.possible_task is not None and c.possible_task == task and not c == car2:
-                            print(c)
-                            input('same task2')
                 continue
             break
         if option is None:
@@ -174,7 +163,6 @@ class TPTS:
 
         car.possible_task = next_task
 
-        # print(f'A{car.id} - {new_route}')
         self.delete_future_plans(car)
         self.reserve_route(car, new_route, new_orientations)
         return True
@@ -231,9 +219,6 @@ class TPTS:
             for i in range(len(free_cars)):
                 next = False
                 best = free_cars[i]
-                print('---!')
-                print(best[1])
-                print(task)
 
                 best[1].possible_task = task
                 if (best[1].y, best[1].x) == task.start:
@@ -256,10 +241,6 @@ class TPTS:
                         res = self.plan_route_to_delivery(car2)
                     if not res:
                         next = True
-                        print(best[1])
-                        print(task)
-                        print(best[0])
-                        print(car2)
 
                         self.delete_future_plans(best[1])
                         best[1].possible_task = None
@@ -269,8 +250,6 @@ class TPTS:
                             res = self.plan_route_for_car(car2)
                         else:
                             res = self.plan_route_to_delivery(car2)
-                        print(res)
-                        # input('??')
                         break
                 if not next:
                     return
@@ -371,7 +350,6 @@ class TPTS:
                 car.wait()
             if res == False:
                 print('ERROR CANT MOVE!!!---')
-        print(self.moved)
 
     def check_possible_task(self, task):
         for car in self.cars:
@@ -421,10 +399,7 @@ class TPTS:
                     path.append(current.position)
                     all_orientations.append(current.orientation)
                     current = current.parent
-                if not all_orientations[::-1][0] == start_node.orientation:
-                    print(all_orientations[::-1])
-                    print(path[::-1])
-                    input('---')
+
                 return path[::-1], all_orientations[::-1]  # Return reversed path
 
             # Generate children
