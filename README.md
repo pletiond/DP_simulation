@@ -1,5 +1,7 @@
 # Centralized Planning of Autonomous Traffic - simulation
 
+**Master thesis**: http://hdl.handle.net/10467/87975
+
 ## Requirements
 * Python >= 3.6
 * numpy
