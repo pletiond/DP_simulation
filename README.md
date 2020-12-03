@@ -18,4 +18,4 @@ For smaller screens, reduce the variable **tile_len**.
 
 ## Example
 
-[](http://vis_example.PNG)
+![](vis_example.PNG)
